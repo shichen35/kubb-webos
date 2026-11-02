@@ -12,7 +12,7 @@
     "proxy": "node ../service/com.yfsp.app.service/service.js"
   },
   "dependencies": {
-    "hls.js": "^1.7.3",
+    "hls.js": "^1.7.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.1"
   },
