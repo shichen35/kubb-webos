@@ -1,10 +1,10 @@
 {
-  "id": "com.yfsp.app",
+  "id": "com.kubb.app",
   "version": "1.0.0",
   "vendor": "shichen35",
   "type": "web",
   "main": "index.html",
-  "title": "爱壹帆",
+  "title": "酷播",
   "icon": "icon.png",
   "largeIcon": "largeIcon.png",
   "uiRevision": 2,

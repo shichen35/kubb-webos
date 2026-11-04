@@ -1,5 +1,5 @@
 /*
- * The single request entry point for the yfsp gateway. Business code calls
+ * The single request entry point for the kubb gateway. Business code calls
  * apiGet(HOST.m10, path, params) / apiPost(...) and gets back `data.info`.
  *
  * Pipeline per request: build the query (+ v=1) -> sign (vv/pub) -> transport
@@ -14,12 +14,12 @@
  * code 5 means the gateway wants a Cloudflare Turnstile check, which a TV can't
  * pass. It sets a sticky flag so prefetching stops hammering the gateway.
  */
-import { signParams } from './yfspSign.js'
+import { signParams } from './kubbSign.js'
 import { transportGet, transportPost } from '../api/luna.js'
 
 export const HOST = {
-  m10: 'https://m10.yfsp.tv', // lists, detail, episodes, play
-  rank: 'https://rankv21.yfsp.tv', // ranking, search, hot keywords
+  m10: 'https://m10.kubb.tv', // lists, detail, episodes, play
+  rank: 'https://rankv21.kubb.tv', // ranking, search, hot keywords
 }
 
 const TIMEOUT_MS = 3000

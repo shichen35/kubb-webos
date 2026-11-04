@@ -22,7 +22,7 @@ import { progressEntry } from './watchState.js'
 
 const CAP = 40
 
-export const historyStore = createStore('yfsp:history', [])
+export const historyStore = createStore('kubb:history', [])
 
 export function list() {
   return historyStore.get()

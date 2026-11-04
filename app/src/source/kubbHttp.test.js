@@ -1,8 +1,8 @@
-// Run: node --test src/source/yfspHttp.test.js
+// Run: node --test src/source/kubbHttp.test.js
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { ApiError, apiGet, buildQuery, isChallenged, unwrap, HOST } from './yfspHttp.js'
-import { canonicalQuery } from './yfspSign.js'
+import { ApiError, apiGet, buildQuery, isChallenged, unwrap, HOST } from './kubbHttp.js'
+import { canonicalQuery } from './kubbSign.js'
 
 const body = (code, msg = '', info = []) => JSON.stringify({ ret: 200, data: { code, msg, info } })
 
@@ -43,7 +43,7 @@ test('apiGet retries an HTTP error with a fresh signature, then gives up', async
   })
   await assert.rejects(apiGet(HOST.m10, '/api/list/Search', { cinema: 1, region: '大陆' }), /HTTP 520/)
   assert.equal(urls.length, 3)
-  assert.match(urls[0], /^https:\/\/m10\.yfsp\.tv\/api\/list\/Search\?cinema=1&region=%E5%A4%A7%E9%99%86&v=1&vv=[0-9a-f]{32}&pub=\d+$/)
+  assert.match(urls[0], /^https:\/\/m10\.kubb\.tv\/api\/list\/Search\?cinema=1&region=%E5%A4%A7%E9%99%86&v=1&vv=[0-9a-f]{32}&pub=\d+$/)
 })
 
 test('apiGet does not retry a business error', async (t) => {

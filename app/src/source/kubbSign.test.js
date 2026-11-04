@@ -1,7 +1,7 @@
-// Run: node --test src/source/yfspSign.test.js
+// Run: node --test src/source/kubbSign.test.js
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { md5, canonicalQuery, sign, signParams } from './yfspSign.js'
+import { md5, canonicalQuery, sign, signParams } from './kubbSign.js'
 
 // pConfig mode (the homepage's inlined keys): privateKey is derived from the
 // publicKey — observed on 3 samples, only used here to replay captured vectors.

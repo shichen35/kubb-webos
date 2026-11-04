@@ -1,7 +1,7 @@
 {
-  "name": "yfsp-webos",
+  "name": "kubb-webos",
   "version": "1.0.0",
-  "description": "yfsp.tv (爱壹帆) LG webOS TV client",
+  "description": "kubb.tv (酷播, formerly 爱壹帆 yfsp.tv) LG webOS TV client",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "sim": "vite build && cp -r webos-meta/. dist/ && ares-launch -s 26 -sp /Applications dist",
-    "proxy": "node ../service/com.yfsp.app.service/service.js"
+    "proxy": "node ../service/com.kubb.app.service/service.js"
   },
   "dependencies": {
     "hls.js": "^1.7.4",

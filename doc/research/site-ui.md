@@ -1,6 +1,6 @@
 # 爱壹帆网页版界面调研
 
-调研对象是 https://www.yfsp.tv/（爱壹帆国际版），目的是给电视端界面设计找依据：站点怎么组织内容、筛选维度有哪些真实取值、卡片和详情页展示哪些字段、配色和字号大概是什么样。
+调研对象是 https://www.kubb.tv/（爱壹帆国际版），目的是给电视端界面设计找依据：站点怎么组织内容、筛选维度有哪些真实取值、卡片和详情页展示哪些字段、配色和字号大概是什么样。
 
 调研时间 2026-10-28，未登录，出口地区被识别为美国（接口带 `region=US`），桌面视口 1600×900。截图在 `img/` 下，文末有索引。颜色和尺寸都是用浏览器读 computed style 拿到的实际值，不是目测。
 
@@ -12,13 +12,13 @@
 
 页脚有地区切换：全球 GL、美国 US、加拿大 CA、英国 UK、意大利 IT、德国 DE、法国 FR、西班牙 ES、东南亚 MY、澳洲 AU、日本 JP、新西兰 NZ、韩国 KR、新加坡 SG。接口参数里的 `region` 应该就对应这里，片库可能随地区不同（比如搜「庆余年」只出了第 2 季，没看到第 1 季，是否是地区版权导致的还没核实）。
 
-广告非常密：首页轮播第一帧是博彩广告，列表页筛选面板右侧、播放页右栏和播放器下方都有广告位，播放前还有贴片广告。广告链接统一走 `ppt.yfsp.tv/c/c?position=...`，电视端可以按这个域名把它们过滤掉。
+广告非常密：首页轮播第一帧是博彩广告，列表页筛选面板右侧、播放页右栏和播放器下方都有广告位，播放前还有贴片广告。广告链接统一走 `ppt.kubb.tv/c/c?position=...`，电视端可以按这个域名把它们过滤掉。
 
 官方自己有安卓电视/机顶盒客户端（下载页标注 v2.4.5，「支持 4K、云加速」），从宣传图看是顶部标签栏加大图轮播的布局，和 olevod 的电视端结构接近。
 
 ## 频道与分类
 
-站点的频道菜单是一个静态 JSON：`https://www.yfsp.tv/assets/menu/mainmenu_fix.json?v=5`，不需要签名就能拿到。电视端可以直接把它冻结成 `taxonomy.js`，做法和 olevod 一样。
+站点的频道菜单是一个静态 JSON：`https://www.kubb.tv/assets/menu/mainmenu_fix.json?v=5`，不需要签名就能拿到。电视端可以直接把它冻结成 `taxonomy.js`，做法和 olevod 一样。
 
 长视频频道（路由都是 `/list/<slug>`）：
 
@@ -85,11 +85,11 @@
 - 海报下方是片名（16px 白色）和类型（14px，40% 透明白）。短剧卡片类型行里会带「竖屏」。
 - 鼠标悬停时卡片放大成一张详情浮层：评分、片名、类型 / 地区 / 年份 / 语言四个标签、添加日期或更新信息、主演、简介前两行、热度（火焰图标加数字，`#ff743d`）、「详情」按钮。
 
-海报图片在 `static.yfsp.tv/upload/video/*.gif`（后缀是 gif，但带 `format=jpg` 参数时返回 jpg），支持服务端缩放：`?w=238&h=340&format=jpg&mode=stretch`，也有 `mode=crop`。电视端可以按自己的卡片尺寸直接请求合适大小，省流量和解码时间。横版图用 `w=640&h=360&mode=crop`。
+海报图片在 `static.kubb.tv/upload/video/*.gif`（后缀是 gif，但带 `format=jpg` 参数时返回 jpg），支持服务端缩放：`?w=238&h=340&format=jpg&mode=stretch`，也有 `mode=crop`。电视端可以按自己的卡片尺寸直接请求合适大小，省流量和解码时间。横版图用 `w=640&h=360&mode=crop`。
 
 ## 搜索
 
-点搜索框会弹出下拉：上面是「历史搜索」（本地，可清空），下面是「热门搜索」前 10，前三名序号是橙色斜体。热搜数据来自 `rankv21.yfsp.tv/v3/list/gethotsearchlist?cinema=1&size=10`，这个接口不带签名。
+点搜索框会弹出下拉：上面是「历史搜索」（本地，可清空），下面是「热门搜索」前 10，前三名序号是橙色斜体。热搜数据来自 `rankv21.kubb.tv/v3/list/gethotsearchlist?cinema=1&size=10`，这个接口不带签名。
 
 结果页路由是 `/search/<关键词>`。顶部分「视频」「用户」两个结果类型；下面是排序（匹配程度、添加时间、更新时间、人气高低、评分高低）和一整套筛选（版块、地区、语言、年份、画质、状态），右侧栏是热门搜索。结果把长视频和小视频混在一起：长视频是横排大卡（海报、标题高亮关键词、类型 / 地区 / 年份 / 语言、评分、热度、导演、主演，下面直接摊开选集按钮），小视频是一行缩略图加时长、上传时间和上传者。电视端只保留长视频结果即可。
 
@@ -156,7 +156,7 @@ olevod 没有排行榜，这是需要新增的页面。
 | 页面 | 处理 | 说明 |
 | --- | --- | --- |
 | 顶部标签栏 TabBar | 沿用 | 标签换成 首页、电影、电视剧、综艺、动漫、短剧、体育、纪录片，加新增的「排行」；去掉 olevod 的「VIP蓝光」。搜索、收藏、历史、设置、账号图标保持不变 |
-| 首页 HomePage | 沿用结构 | 轮播（过滤 `ppt.yfsp.tv` 广告帧）、继续观看、我的收藏、五个频道货架。不要小视频货架 |
+| 首页 HomePage | 沿用结构 | 轮播（过滤 `ppt.kubb.tv` 广告帧）、继续观看、我的收藏、五个频道货架。不要小视频货架 |
 | 分类页 CategoryPage + FilterPanel | 沿用，改筛选维度 | 类型仍是第一层；「额外筛选」里放地区、语言、年份区间、画质，剧集类加状态，短剧加横竖屏。去掉首字母。排序改成添加时间、更新时间（剧集类）、人气、评分。站点是分页接口，前端继续做成滚动自动加载 |
 | 搜索 SearchPage | 沿用 | 屏幕键盘和拼音首字母联想照搬；热门搜索用 `gethotsearchlist`；结果只留长视频 |
 | 详情 DetailPage | 沿用，加字段 | 加热度、第三方评分、语言标签、「N集全 / 更新至」。50 集分组和 olevod 现有逻辑一致，组名改用站点的「0001-0050」格式也可以。语言版本若接口能关联，做成详情页上的「国语 / 粤语」切换 |
@@ -170,11 +170,11 @@ olevod 没有排行榜，这是需要新增的页面。
 
 只记录 URL 形状，给接口调研参考，没有逐个验证：
 
-- 详情：`m10.yfsp.tv/v3/video/detail?cinema=1&device=1&player=CkPlayer&tech=HLS&country=..&lang=cns&v=1&id=<视频id>&region=US&vv=<签名>&pub=<...>`
-- 播放：`m10.yfsp.tv/v3/video/play?cinema=1&id=<视频id>&a=1&lang=none&usersign=1&region=US&device=1&isMasterSupport=1&v=1&vv=..&pub=..`
-- 选集 / 语言版本：`m10.yfsp.tv/v3/video/languagesplaylist?cinema=1&vid=<视频id>&lsk=1&taxis=0&cid=0,1,4,132&...`
-- 评分、评论、弹幕、相关：`v3/video/GetRatingList`、`v3/video/commentList`、`api/video/getBarrage`、`rankv21.yfsp.tv/api/home/getRelativeVideo`
-- 热搜：`rankv21.yfsp.tv/v3/list/gethotsearchlist?cinema=1&size=10&v=1&cacheable=1`（无签名）
+- 详情：`m10.kubb.tv/v3/video/detail?cinema=1&device=1&player=CkPlayer&tech=HLS&country=..&lang=cns&v=1&id=<视频id>&region=US&vv=<签名>&pub=<...>`
+- 播放：`m10.kubb.tv/v3/video/play?cinema=1&id=<视频id>&a=1&lang=none&usersign=1&region=US&device=1&isMasterSupport=1&v=1&vv=..&pub=..`
+- 选集 / 语言版本：`m10.kubb.tv/v3/video/languagesplaylist?cinema=1&vid=<视频id>&lsk=1&taxis=0&cid=0,1,4,132&...`
+- 评分、评论、弹幕、相关：`v3/video/GetRatingList`、`v3/video/commentList`、`api/video/getBarrage`、`rankv21.kubb.tv/api/home/getRelativeVideo`
+- 热搜：`rankv21.kubb.tv/v3/list/gethotsearchlist?cinema=1&size=10&v=1&cacheable=1`（无签名）
 - 视频流：`exchange-*.pipecdn.vip/<路径>/chunklist.m3u8?vendtime=..&vhash=..`，分片 `media_N.ts?vCustomParameter=0_<客户端IP>_US_1_0_1_0&lb=..`。注意 `vCustomParameter` 里带了客户端 IP，可能和播放地址绑定
 
 签名参数叫 `vv`，另有一个很长的 `pub` 参数，和 olevod 的 `_vv` 不完全一样。

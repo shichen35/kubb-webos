@@ -1,6 +1,6 @@
 # 架构概览
 
-这是爱壹帆（yfsp.tv 国际版）的 LG webOS 电视客户端：只用遥控器方向键找片、看剧、续播。数据来自 yfsp.tv 的公开接口，不登录也能用。
+这是爱壹帆（kubb.tv 国际版）的 LG webOS 电视客户端：只用遥控器方向键找片、看剧、续播。数据来自 kubb.tv 的公开接口，不登录也能用。
 
 参考实现是欧乐影视客户端 olevod（`/Users/chenshi/Developer/olevod`）。两边的界面形态、焦点模型、存储和播放会话几乎一样，差别集中在数据源这一层：接口签名、响应格式、媒体 CDN 的访问规则。本文先讲整体结构，再逐块说明和 olevod 不同的地方。调研原始记录在 `doc/research/`，文中凡是写「实测」的结论都能在那里找到出处。
 
@@ -22,7 +22,7 @@ app/
   src/
     config/      标签栏与分类配置（taxonomy.js、nav.js）
     api/         luna.js（环境握手、传输、mediaUrl）、feeds.js（缓存与预取）
-    source/      yfsp 适配器：签名、请求信封、业务接口、字段归一化
+    source/      kubb 适配器：签名、请求信封、业务接口、字段归一化
     hooks/       焦点引擎 useFocus、本地存储 useStore
     store/       收藏、历史、设置、搜索记录、续播状态
     components/  卡片、标签栏、筛选面板、对话框、屏幕键盘
@@ -31,13 +31,13 @@ app/
     styles/
   scripts/       smoke.mjs：不经界面走通列表、详情、取址、经代理拉分片
   webos-meta/    appinfo.json 和图标，打包时合并进构建产物
-service/com.yfsp.app.service/
+service/com.kubb.app.service/
                  Luna 服务：接口转发 + 本地媒体代理（代理也能在开发机上单独运行）
 build.sh         构建并打包 .ipk
 doc/             文档；doc/research/ 是调研记录
 ```
 
-应用 id 是 `com.yfsp.app`，服务 id 必须以应用 id 为前缀，所以是 `com.yfsp.app.service`。
+应用 id 是 `com.kubb.app`，服务 id 必须以应用 id 为前缀，所以是 `com.kubb.app.service`。
 
 ## 3. 数据通道
 
@@ -51,8 +51,8 @@ graph LR
         Svc["Luna 服务<br/>接口转发（仅电视）"]
         Proxy["本地媒体代理<br/>127.0.0.1:7654"]
     end
-    API["m10.yfsp.tv<br/>rankv21.yfsp.tv"]
-    IMG["static.yfsp.tv<br/>pptstatic.yfsp.tv"]
+    API["m10.kubb.tv<br/>rankv21.kubb.tv"]
+    IMG["static.kubb.tv<br/>pptstatic.kubb.tv"]
     CDN["*.pipecdn.vip<br/>（Cloudflare）"]
 
     UI -->|"电视：Luna fetch"| Svc
@@ -65,8 +65,8 @@ graph LR
 
 为什么这样分：
 
-- 接口网关对任意 `Origin`（包括 curl 模拟的 `Origin: null`）都回显 `Access-Control-Allow-Origin`，不要 cookie、token、Referer，也不挑 User-Agent，所以模拟器和浏览器直连就能取到数据。但这只是 curl 的结论。olevod 的网关当时同样回 `ACAO: *`，真机打包后的 webview 跑在 `file://` 下却直连不通，最后才加了 Luna `fetch`（olevod `service.js` 开头的注释和 `doc/dev/data-channel.md`）。在真机验证（Q4）之前不能假定 yfsp 会不一样，所以电视上保留 olevod 的 `transportGet()`：Luna 服务就绪时走服务转发，失败或服务没起来再退直连。服务的接口白名单换成 `m10.yfsp.tv` 和 `rankv21.yfsp.tv` 两个主机，精确匹配。见决策 D2。
-- 视频 CDN 在 Cloudflare 后面，规则是「Origin 和 Referer 不带可以，带就必须是 yfsp 自家域名」。hls.js 用 XHR 拉流，浏览器一定会带上 `Origin`：电视上是 `null`，开发时是 `http://localhost:5173`，都会被回 520。这个头 JS 改不掉，所以媒体必须经一个能控制出站头的本地代理。
+- 接口网关对任意 `Origin`（包括 curl 模拟的 `Origin: null`）都回显 `Access-Control-Allow-Origin`，不要 cookie、token、Referer，也不挑 User-Agent，所以模拟器和浏览器直连就能取到数据。但这只是 curl 的结论。olevod 的网关当时同样回 `ACAO: *`，真机打包后的 webview 跑在 `file://` 下却直连不通，最后才加了 Luna `fetch`（olevod `service.js` 开头的注释和 `doc/dev/data-channel.md`）。在真机验证（Q4）之前不能假定 kubb 会不一样，所以电视上保留 olevod 的 `transportGet()`：Luna 服务就绪时走服务转发，失败或服务没起来再退直连。服务的接口白名单换成 `m10.kubb.tv` 和 `rankv21.kubb.tv` 两个主机，精确匹配。见决策 D2。
+- 视频 CDN 在 Cloudflare 后面，规则是「Origin 和 Referer 不带可以，带就必须是 kubb 自家域名」。hls.js 用 XHR 拉流，浏览器一定会带上 `Origin`：电视上是 `null`，开发时是 `http://localhost:5173`，都会被回 520。这个头 JS 改不掉，所以媒体必须经一个能控制出站头的本地代理。
 - 图片 CDN 没有防盗链、带 `ACAO: *`，`<img>` 直接加载，不进代理。
 
 一个和 olevod 不同的后果：olevod 在浏览器和模拟器里播放不需要代理，这里三个环境都需要。所以代理写成一个能独立运行的 Node 脚本：
@@ -78,26 +78,26 @@ olevod 的 `luna.js` 有两处 `isTV` 前置条件：`initTvEnv()` 开头 `if (!
 
 ### 代理的出站规则
 
-在 olevod 的 `service.js` 骨架上改出站头和白名单。要说清楚的是，下面这套规则还没有端到端播过：`mvp/proxy.cjs` 在桌面 Chrome 里用 hls.js 1.5.17 播通时，出站一直带着 `Referer: https://www.yfsp.tv/`，白名单是 `pipecdn.vip`、`global-cdn.me`、`yfsp.tv` 三个固定后缀，还会改写 m3u8 里的绝对地址。「不带 Referer」「m3u8 不改写」只有 curl 和 `probe.cjs` 的直连请求作证。M1-4 的完成标准里补了一条：用按本节规则写的代理配 hls.js light 实际播一段。2026-10-29 已在 M1-4 验证：`service.js` 按本节规则（不带 Referer、m3u8 不改写、后缀加路径白名单）配 hls.js light，在桌面浏览器里从 `http://127.0.0.1:8099` 起播，`currentTime` 10 秒内走到 10，没有报错。
+在 olevod 的 `service.js` 骨架上改出站头和白名单。要说清楚的是，下面这套规则还没有端到端播过：`mvp/proxy.cjs` 在桌面 Chrome 里用 hls.js 1.5.17 播通时，出站一直带着 `Referer: https://www.kubb.tv/`，白名单是 `pipecdn.vip`、`global-cdn.me`、`kubb.tv` 三个固定后缀，还会改写 m3u8 里的绝对地址。「不带 Referer」「m3u8 不改写」只有 curl 和 `probe.cjs` 的直连请求作证。M1-4 的完成标准里补了一条：用按本节规则写的代理配 hls.js light 实际播一段。2026-10-29 已在 M1-4 验证：`service.js` 按本节规则（不带 Referer、m3u8 不改写、后缀加路径白名单）配 hls.js light，在桌面浏览器里从 `http://127.0.0.1:8099` 起播，`currentTime` 10 秒内走到 10，没有报错。
 
-- 不发 `Origin`，不转发客户端的 `Origin`、`Referer`、`Cookie`。`Referer` 也不带（带 `https://www.yfsp.tv/` 同样能过，但少一个指纹更好）。olevod 的 `Referer: https://www.olevod.com/` 在这里会被 520。
+- 不发 `Origin`，不转发客户端的 `Origin`、`Referer`、`Cookie`。`Referer` 也不带（带 `https://www.kubb.tv/` 同样能过，但少一个指纹更好）。olevod 的 `Referer: https://www.olevod.com/` 在这里会被 520。
 - `User-Agent` 固定成一个 webOS 的 Chrome UA。CDN 对 `curl/*`、`python-requests/*` 回 403。
 - 透传 `Range`，出站 `Accept-Encoding: identity`（代理按字节转发，不能让上游给 gzip）。
 - 回写状态码、`Content-Type`、`Content-Length`、`Content-Range`、`Accept-Ranges`，加 `ACAO: *`。上游的 403、520 原样回给播放器，前端靠它区分「地址过期」和网络错误。
 - m3u8 不改写：分片是相对路径，经代理加载时自然也走代理。
-- 白名单：CDN 域名是随机生成、会轮换的 `.vip` 域名（`upload.yfsp.tv` 的预览接口一次就给出了 20 个不同域名），固定后缀表维护不了。推荐规则是 host 以 `.vip`、`.yfsp.tv` 或 `.global-cdn.me` 结尾，并且路径以 `.m3u8` 或 `.ts` 结尾。校验必须用 `new URL()` 解析后的 `hostname`，并拒绝带 `username` / `password` 的地址：MVP 最初按字符串截 host，`/proxy/pipecdn.vip:x@example.com/` 就被转发到了 example.com，复核时才修掉。代理只监听 127.0.0.1，不会变成对外开放的代理。另一种做法见决策 D8。
-- keepAlive 的 TLS 连接、出错断干净、`uncaughtException` 只记日志、注册 keepAlive activity，这些照搬 olevod。日志写 `/tmp/yfsp-service.log`。
+- 白名单：CDN 域名是随机生成、会轮换的 `.vip` 域名（`upload.kubb.tv` 的预览接口一次就给出了 20 个不同域名），固定后缀表维护不了。推荐规则是 host 以 `.vip`、`.kubb.tv` 或 `.global-cdn.me` 结尾，并且路径以 `.m3u8` 或 `.ts` 结尾。校验必须用 `new URL()` 解析后的 `hostname`，并拒绝带 `username` / `password` 的地址：MVP 最初按字符串截 host，`/proxy/pipecdn.vip:x@example.com/` 就被转发到了 example.com，复核时才修掉。代理只监听 127.0.0.1，不会变成对外开放的代理。另一种做法见决策 D8。
+- keepAlive 的 TLS 连接、出错断干净、`uncaughtException` 只记日志、注册 keepAlive activity，这些照搬 olevod。日志写 `/tmp/kubb-service.log`。
 
 ## 4. 数据源适配器与领域模型
 
-页面和 `feeds.js` 只 import `app/src/source/index.js`，它 re-export `yfsp.js`。不做运行时可切换的多源注册表，项目只有一个源。
+页面和 `feeds.js` 只 import `app/src/source/index.js`，它 re-export `kubb.js`。不做运行时可切换的多源注册表，项目只有一个源。
 
 ```
 app/src/source/
-  index.js       export * from './yfsp.js'
-  yfsp.js        业务接口 + 字段归一化，输出下面的领域模型
-  yfspHttp.js    请求信封：选主机、签名、发送、解包、错误码映射、超时重试
-  yfspSign.js    纯函数：md5、canonicalQuery、sign，配 node --test 向量
+  index.js       export * from './kubb.js'
+  kubb.js        业务接口 + 字段归一化，输出下面的领域模型
+  kubbHttp.js    请求信封：选主机、签名、发送、解包、错误码映射、超时重试
+  kubbSign.js    纯函数：md5、canonicalQuery、sign，配 node --test 向量
 ```
 
 ### 对页面暴露的函数
@@ -111,7 +111,7 @@ app/src/source/
 | `searchList({keyword, page, size})` | `POST rankv21/v3/list/briefsearch` | `Page<Summary>`，只要影视结果 |
 | `detail(id)` | `m10/v3/video/detail` + `m10/v3/video/languagesplaylist?taxis=1` | `Detail` |
 | `resolveStream(id, episode)` | `m10/v3/video/play` | `Stream`，不可播时抛 `ApiError` |
-| `imageUrl(pic, size)` | 无，拼 `static.yfsp.tv` 缩放参数；`size` 是 `Thumb` 传的 `'384x560'` 这种字符串 | 完整图片 URL |
+| `imageUrl(pic, size)` | 无，拼 `static.kubb.tv` 缩放参数；`size` 是 `Thumb` 传的 `'384x560'` 这种字符串 | 完整图片 URL |
 
 olevod 有、这里没有的：`searchSuggest`（站点没有联想接口，见决策 D5）、`captcha` / `login` / `userInfo`（不做账号）。
 
@@ -125,7 +125,7 @@ Summary（卡片、收藏、历史共用）：
 | --- | --- | --- |
 | `id` | 列表 `key`，搜索和排行里是 `contxt`，轮播里是 `listPath` | 11 位字符串，路由参数和存储主键 |
 | `name` | `title` | |
-| `pic` | `image` 或 `imgPath` | `imgPath` 可能带 `s` 后缀，按站点做法 `replace('s.', '.')`；排行里是相对路径，补 `https://static.yfsp.tv` |
+| `pic` | `image` 或 `imgPath` | `imgPath` 可能带 `s` 后缀，按站点做法 `replace('s.', '.')`；排行里是相对路径，补 `https://static.kubb.tv` |
 | `score` | `rating` / `score` | 转成 number，0 表示没有 |
 | `remarks` | `lastName` | 「22」「18集全」，电影一般为空 |
 | `year` / `area` | `year` / `regional` | |
@@ -160,9 +160,9 @@ Stream：`{ url, type: 'hls', label }`。`url` 是未经代理的 m3u8，播放�
 
 ## 5. 签名与请求信封
 
-yfsp 没有载荷加密，响应是明文 JSON，这一节比 olevod 简单很多。
+kubb 没有载荷加密，响应是明文 JSON，这一节比 olevod 简单很多。
 
-签名（`yfspSign.js`，从站点主包 `uriSignature()` 整理，10 个浏览器真实请求收作 `yfspSign.test.js` 的测试向量）：
+签名（`kubbSign.js`，从站点主包 `uriSignature()` 整理，10 个浏览器真实请求收作 `kubbSign.test.js` 的测试向量）：
 
 ```text
 canonical(qs): 按 & 拆开，值 decodeURIComponent，"+" 换成空格，按原顺序拼回
@@ -175,9 +175,9 @@ POST: body + "&vv=" + vv + "&pub=" + pub      （URL 上的 query 不签）
 
 参数要点：`m10` 和 `rankv21` 下的请求统一追加 `v=1`，它参与签名，要先拼再签，这件事由信封做；`cinema=1` 不由信封统一追加，各业务函数照站点的参数原样写，因为有例外：影视搜索 `briefsearch` 恰好不带 `cinema`（带 `cinema=3` 的那次是用户上传视频），筛选项接口 `GetSearchCondition` 也只有 `version=1&v=1`；参数按发出顺序签，不排序。部分接口站点自己不签（首页、菜单、热搜），客户端一律签上，对它们无害。浏览器里 MD5 没有原生实现，拷 olevod `sign.js` 里的 md5。
 
-请求信封（`yfspHttp.js`，骨架来自 olevod 的 `http.js`）：
+请求信封（`kubbHttp.js`，骨架来自 olevod 的 `http.js`）：
 
-- 主机按接口选：`m10.yfsp.tv` 放列表、详情、选集、播放，`rankv21.yfsp.tv` 放排行、搜索、热搜。业务函数里写相对路径加主机名常量。
+- 主机按接口选：`m10.kubb.tv` 放列表、详情、选集、播放，`rankv21.kubb.tv` 放排行、搜索、热搜。业务函数里写相对路径加主机名常量。
 - 响应外层是 `{ret:200, data:{code, msg, info:[...]}}`，HTTP 总是 200。`data.code === 0` 才算成功，返回 `data.info`（大多数接口取 `info[0]`，由业务函数自己取）。
 - 非 0 抛 `ApiError(msg, code)`。code 1 是业务错误（签名错、视频不存在）；code 4 站点会弹一个 prevent 对话框，原因没查清，按通用 `ApiError` 处理，用 `msg` 作文案、记日志、不重试；code 5 表示网关要求人机验证（Cloudflare Turnstile），电视上过不了，单独给文案「访问受限，请稍后再试」，并停止一切自动重试和预取。code 2、3 只有登录态会遇到，同样按通用 `ApiError` 处理。
 - GET 3 秒超时、最多 3 次、每次重新签名；`ApiError` 不重试；POST（只有搜索）8 秒、不重试。这些数值照搬 olevod，olevod 文档里有原因。
@@ -236,8 +236,8 @@ POST: body + "&vv=" + vv + "&pub=" + pub      （URL 上的 query 不签）
 ```mermaid
 sequenceDiagram
     participant P as PlayerPage
-    participant S as source/yfsp.js
-    participant A as m10.yfsp.tv
+    participant S as source/kubb.js
+    participant A as m10.kubb.tv
     participant X as 本地代理
     participant C as pipecdn.vip
 
@@ -275,7 +275,7 @@ sequenceDiagram
 
 第一版不做登录，理由：
 
-- 登录是 `account.yfsp.tv/Auth/Login` 的服务端表单（邮箱或手机号加密码），成功后靠 `account.yfsp.tv` 的 cookie 做 SSO，主站再换 token。`file://` 下的 cookie 行为不确定，要做大概得把整个流程搬进 Luna 服务里维护 cookie。
+- 登录是 `account.kubb.tv/Auth/Login` 的服务端表单（邮箱或手机号加密码），成功后靠 `account.kubb.tv` 的 cookie 做 SSO，主站再换 token。`file://` 下的 cookie 行为不确定，要做大概得把整个流程搬进 Luna 服务里维护 cookie。
 - 调研时不允许登录，登录后非会员能不能拿到 720P、VIP 档的流是什么格式，都没有验证。
 - 早先的猜测「登录要过 Turnstile 或 reCAPTCHA」被接口调研修正了：人机验证是全局兜底（任意接口返回 code 5 时），不在登录表单里；表单有个隐藏字段 `requirecode`，推测失败几次后才要验证码。所以登录在技术上未必做不到，只是收益未知。
 
@@ -316,7 +316,7 @@ sequenceDiagram
 | 浏览器开发可能要给接口配 Vite 代理 | 接口不用；反而媒体在所有环境都要代理 |
 | Luna 服务保留接口转发 | 保留，主机白名单换成 `m10` / `rankv21`；模拟器和浏览器直连（决策 D2） |
 | 搜索联想和拼音首字母可以照搬 | 站点没有联想接口（决策 D5） |
-| `service.js` 媒体带 `Referer: https://www.yfsp.tv/` | curl 证明不带也行，推荐不带，但还没端到端播过；关键是不发 Origin、不用 curl UA |
+| `service.js` 媒体带 `Referer: https://www.kubb.tv/` | curl 证明不带也行，推荐不带，但还没端到端播过；关键是不发 Origin、不用 curl UA |
 
 另外几处被列成「原样」的文件其实和 olevod 的数据形状耦合，复用地图第二节已改成「改造」，开发计划对应任务也列上了：
 
@@ -367,7 +367,7 @@ sequenceDiagram
 ### 开发中验证的问题
 
 - Q1：`list/Search` 的 `orderby` 0 和 1 是否分别是添加时间和更新时间。已关闭（M1-6）：电视剧频道 `orderby=0` 的前 5 条 `addTime` 严格递减（10 月 28 日到 26 日），`orderby=1` 的前 5 条加入时间分散在 9 月到 10 月、都是正在更新的剧，确认 0 是添加时间、1 是更新时间。
-- Q2：已关闭。剧集 key 配 `a=0` 在脚本里能取到指定剧集的地址并播放（M1-5 的 `yfsp.test.js` 和 `app/scripts/smoke.mjs` 都走这条路）。
+- Q2：已关闭。剧集 key 配 `a=0` 在脚本里能取到指定剧集的地址并播放（M1-5 的 `kubb.test.js` 和 `app/scripts/smoke.mjs` 都走这条路）。
 - Q3：webOS 模拟器里的应用能否访问宿主机 `127.0.0.1:7654`。M3-2 的播放在桌面浏览器里验证（首页进详情、播放、续播记录写入历史），模拟器里还没测。
 - Q4：真机 webview 从 `file://` 直连接口能否成功（决定 Luna 失败时退直连有没有用；olevod 的经验是不通），Luna 转发和代理在 Node 16 上是否正常，界面在 Chromium 108 上是否正常。在 M3 之后的检查点验证，发布前真机再确认一次。
 - Q5：分片 `verify` 的确切有效期，决定长时间暂停后的恢复体验。M3-3（2026-10-29）已实现并验证恢复路径：测试代理让分片持续回 403，播放器重新 `resolveStream`、换新地址后从原位置继续，没有出错页；单次 403 会被 hls.js 自己的重试吃掉，不触发换址。真实有效期（暂停 30 分钟以上）还没测。
@@ -382,13 +382,13 @@ sequenceDiagram
 每条后面是推荐做法。2026-10-28 已全部按推荐做法拍板。
 
 - D1 账号与画质：第一版不做登录，只播 576P，VIP 集只提示。
-- D2 接口通道：保留 olevod 的 `transportGet()` 分层，电视上 Luna `fetch` 优先、失败退直连，模拟器和浏览器直连；服务的接口白名单换成 `m10.yfsp.tv`、`rankv21.yfsp.tv`。备选是只直连、删掉 Luna `fetch`，省一点代码，但要等 Q4 在真机上证明直连可行才能选。
+- D2 接口通道：保留 olevod 的 `transportGet()` 分层，电视上 Luna `fetch` 优先、失败退直连，模拟器和浏览器直连；服务的接口白名单换成 `m10.kubb.tv`、`rankv21.kubb.tv`。备选是只直连、删掉 Luna `fetch`，省一点代码，但要等 Q4 在真机上证明直连可行才能选。
 - D3 排行榜：第一版在首页加一排「热播榜」货架（复用 Shelf，一次请求）；独立的排行标签页等用了一段时间再决定。
 - D4 剧集顺序：适配器输出「新的在前」，`index` 按升序从 1 编号，这样 olevod 的详情、播放器和正倒序记忆都不用改。
 - D5 搜索输入：站点没有联想接口。推荐保留屏幕键盘，输入停顿后直接调 `briefsearch`，把前几条片名当联想；拼音首字母能否命中要等 Q7，不行就在键盘上默认切到系统输入法。备选是去掉屏幕键盘、只用系统键盘。
 - D6 筛选面板：改成按配置遍历维度，去掉首字母；第一版露出类型、地区、语言、年份、状态、形式和排序，画质筛选先不露（免费只能播 576P，按 4K 筛出来的片也播不了 4K）。
 - D7 清晰度：不做切换，也不展示 VIP 档。
-- D8 媒体代理白名单：静态规则（`.vip` / `.yfsp.tv` / `.global-cdn.me` 后缀加 `.m3u8` / `.ts` 路径）。备选是前端取址后把 host 注册给服务，更严但多一次 Luna 调用。
+- D8 媒体代理白名单：静态规则（`.vip` / `.kubb.tv` / `.global-cdn.me` 后缀加 `.m3u8` / `.ts` 路径）。备选是前端取址后把 host 注册给服务，更严但多一次 Luna 调用。
 - D9 配色：跟站点走（`#090b21` 背景、`#00c0ff` 主色和焦点）。备选是保留 olevod 的中性深色。
 - D10 应用名和图标：appinfo 的 `title` 用「爱壹帆」还是加后缀（如「爱壹帆 TV」），图标自己画。
 - D11 调研资料入库：`doc/research/` 的文档提交，但 `img/home-top.jpg` 里有站点的博彩广告，推荐删掉或裁掉再提交；`mvp/` 在 M1 把逻辑迁进正式代码后删除，不进历史。

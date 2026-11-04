@@ -1,5 +1,5 @@
 /*
- * com.yfsp.app.service — webOS background service (Node 16, CommonJS).
+ * com.kubb.app.service — webOS background service (Node 16, CommonJS).
  *
  * One process, two channels:
  *   1. Luna bus methods `ping` / `fetch` — API JSON retrieval. The packaged
@@ -28,7 +28,7 @@ var fs = require('fs')
 // logging — service console output does not reach journald; append to a file
 // that on-device debugging can read (or `tail -f` locally).
 // ---------------------------------------------------------------------------
-var LOG_FILE = '/tmp/yfsp-service.log'
+var LOG_FILE = '/tmp/kubb-service.log'
 function log(msg) {
   try {
     fs.appendFileSync(LOG_FILE, new Date().toISOString() + ' ' + msg + '\n')
@@ -40,7 +40,7 @@ function log(msg) {
 // ---------------------------------------------------------------------------
 // host allowlists — the service must never act as an open proxy
 // ---------------------------------------------------------------------------
-var API_HOSTS = ['m10.yfsp.tv', 'rankv21.yfsp.tv']
+var API_HOSTS = ['m10.kubb.tv', 'rankv21.kubb.tv']
 
 // CDN hosts are randomly generated *.vip domains that rotate, so a host list
 // can't keep up: allow the suffixes plus playlist/segment paths only. Checked
@@ -48,7 +48,7 @@ var API_HOSTS = ['m10.yfsp.tv', 'rankv21.yfsp.tv']
 // through to example.com — and userinfo is refused outright.
 function isAllowedMediaUrl(u) {
   if (u.username || u.password) return false
-  return /\.(vip|yfsp\.tv|global-cdn\.me)$/.test(u.hostname) && /\.(m3u8|ts)$/.test(u.pathname)
+  return /\.(vip|kubb\.tv|global-cdn\.me)$/.test(u.hostname) && /\.(m3u8|ts)$/.test(u.pathname)
 }
 
 // TLS session reuse — a fresh handshake per media segment is expensive on the
@@ -214,7 +214,7 @@ proxyServer.on('error', function (err) {
 })
 proxyServer.listen(proxyPort, '127.0.0.1', function () {
   log('proxy listening on 127.0.0.1:' + proxyPort)
-  console.log('[yfsp-service] proxy on 127.0.0.1:' + proxyPort)
+  console.log('[kubb-service] proxy on 127.0.0.1:' + proxyPort)
 })
 
 // ---------------------------------------------------------------------------
@@ -224,7 +224,7 @@ proxyServer.listen(proxyPort, '127.0.0.1', function () {
 var service = null
 try {
   var Service = require('webos-service')
-  service = new Service('com.yfsp.app.service')
+  service = new Service('com.kubb.app.service')
 } catch (e) {
   log('webos-service unavailable (dev machine): proxy-only mode')
 }

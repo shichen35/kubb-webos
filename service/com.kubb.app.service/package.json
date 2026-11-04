@@ -1,0 +1,6 @@
+{
+  "name": "com.kubb.app.service",
+  "version": "1.0.0",
+  "description": "kubb data channel: Luna fetch + local media proxy",
+  "main": "service.js"
+}

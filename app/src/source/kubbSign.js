@@ -1,5 +1,5 @@
 /*
- * Request signature for the yfsp gateway — pure functions, no network.
+ * Request signature for the kubb gateway — pure functions, no network.
  *
  *   vv = md5(pub + "&" + lower(canonicalQuery(qs)) + "&" + privateKey)
  *

@@ -8,11 +8,11 @@
 
 | localStorage 键 | 文件 | 内容 | 上限 |
 | --- | --- | --- | --- |
-| `yfsp:settings` | `store/settings.js` | 用户偏好对象 | — |
-| `yfsp:favorites` | `store/favorites.js` | 收藏列表，最新收藏在前 | 不设上限 |
-| `yfsp:history` | `store/history.js` | 观看记录，带续播进度 | 40 条 |
-| `yfsp:searchHistory` | `store/searchHistory.js` | 最近搜索词 | 20 条 |
-| `yfsp:epOrder` | `store/episodeOrder.js` | 改成正序的剧集 `{ [影片 id]: true }` | 不需要 |
+| `kubb:settings` | `store/settings.js` | 用户偏好对象 | — |
+| `kubb:favorites` | `store/favorites.js` | 收藏列表，最新收藏在前 | 不设上限 |
+| `kubb:history` | `store/history.js` | 观看记录，带续播进度 | 40 条 |
+| `kubb:searchHistory` | `store/searchHistory.js` | 最近搜索词 | 20 条 |
+| `kubb:epOrder` | `store/episodeOrder.js` | 改成正序的剧集 `{ [影片 id]: true }` | 不需要 |
 
 
 ## createStore 和 useStoreValue
@@ -52,5 +52,5 @@
 
 ## 容易踩的坑
 
-- 新加一个持久化 store，键名沿用 `yfsp:` 前缀；如果数据会无限增长，要像 history 那样设上限，或者像 epOrder 那样只存例外。
+- 新加一个持久化 store，键名沿用 `kubb:` 前缀（旧版的 `yfsp:` 键会在首次读取时自动迁移过来）；如果数据会无限增长，要像 history 那样设上限，或者像 epOrder 那样只存例外。
 - 改了已有 store 的数据结构，要考虑电视上已经存着的旧格式。settings 靠 `getSetting` 兜底；history 里没有 `updatedAt` 的旧条目就是不显示时间。

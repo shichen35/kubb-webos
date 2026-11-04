@@ -1,6 +1,6 @@
 # 安装与升级
 
-应用不在 LG 应用商店上架，要以侧载方式安装到电视。先从 [最新 Release](https://github.com/shichen35/yfsp-webos/releases/latest) 下载 `com.yfsp.app_<版本>_all.ipk`。
+应用不在 LG 应用商店上架，要以侧载方式安装到电视。先从 [最新 Release](https://github.com/shichen35/kubb-webos/releases/latest) 下载 `com.kubb.app_<版本>_all.ipk`。
 
 要求：LG webOS 24 及以上的电视（2024 年及之后的机型）。目前只在 LG C4 上实测过；更老的系统没有测试，大概率无法运行。
 
@@ -38,14 +38,14 @@ ares-novacom --device tv --getkey
 安装并启动：
 
 ```bash
-ares-install --device tv com.yfsp.app_1.0.0_all.ipk
+ares-install --device tv com.kubb.app_1.0.0_all.ipk
 ```
 
 ```bash
-ares-launch --device tv com.yfsp.app
+ares-launch --device tv com.kubb.app
 ```
 
-之后在电视的应用列表里就能找到「爱壹帆」。
+之后在电视的应用列表里就能找到「酷播」。
 
 ### 注意：开发者模式会过期
 
@@ -68,7 +68,7 @@ ares-launch --device tv com.yfsp.app
 在电视的应用列表里长按应用图标删除，或者执行：
 
 ```bash
-ares-install --device tv --remove com.yfsp.app
+ares-install --device tv --remove com.kubb.app
 ```
 
 卸载会清除这台电视上的全部本地数据：收藏、观看历史、搜索记录和设置。

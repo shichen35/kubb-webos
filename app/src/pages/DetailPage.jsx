@@ -356,7 +356,7 @@ export default function DetailPage({ id, onPlay, style }) {
       {vipNotice && (
         <ConfirmDialog
           title="会员剧集"
-          description="这一集需要爱壹帆会员，本应用暂不支持登录。"
+          description="这一集需要酷播会员，本应用暂不支持登录。"
           confirmLabel="知道了"
           confirmKind="default"
           cancelLabel={null}

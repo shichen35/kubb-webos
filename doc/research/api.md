@@ -1,4 +1,4 @@
-# yfsp.tv 数据接口调研
+# kubb.tv 数据接口调研
 
 调研时间 2026-10-28，出口 IP 在美国，全程未登录。方法是两条线并行：在浏览器里打开首页、分类页、搜索页、排行页和播放页，用 Performance API 记下真实请求；同时读站点主包 `main.e501da686e2f4d234e63.js` 里的 `ApiUrlHelper`（接口表）和 `HttpClientHelper`（签名、拦截、错误处理）。文中的接口都用 curl / node 脱离浏览器、不带任何 cookie 复测过。客户端 IP 一律写成 `<client-ip>`。
 
@@ -10,24 +10,24 @@
 - 绝大多数 GET 要带签名 `vv` + `pub`，不带回 `{"code":1,"msg":"用户签名错误"}`。算法是一次 MD5：`vv = md5(pub + "&" + 小写化的 query + "&" + privateKey)`，其中 query 要先按站点的 `get_query()` 把各参数值 URL 解码（见下文「签名」）。
 - `pub` 可以直接用当前毫秒时间戳，私钥从一张写死的 8 项表里按 `pub % 8` 取，这是站点自己的兜底逻辑。网关不校验时间，前后偏一周的时间戳都能过，所以不依赖电视时钟，也不用先抓首页。`mvp/sign-check.mjs` 用 10 个浏览器抓到的真实请求验证了算法。
 - 不需要 cookie、token、Referer。API 对任意 `Origin`（包括 `null`）都回显 `Access-Control-Allow-Origin` 并带 `Access-Control-Allow-Credentials: true`，浏览器开发不用代理。这是 curl 的结论，打包应用在真机 `file://` 下能否直接 `fetch` 还没验证（olevod 当年同样回 `ACAO: *`，真机却直连不通），见架构文档 Q4。
-- 没遇到 Cloudflare 挑战页，API 也不挑 User-Agent（curl 默认 UA 可以）。但视频 CDN（`*.pipecdn.vip`）挑 UA 和 Origin：`curl/*`、`python-requests/*` 回 403，带了非 `https://www.yfsp.tv` 的 Origin 回 520。媒体必须走本地代理。
+- 没遇到 Cloudflare 挑战页，API 也不挑 User-Agent（curl 默认 UA 可以）。但视频 CDN（`*.pipecdn.vip`）挑 UA 和 Origin：`curl/*`、`python-requests/*` 回 403，带了非 `https://www.kubb.tv` 的 Origin 回 520。媒体必须走本地代理。
 - 站点有一套人机验证兜底：任意接口返回 `code:5` 时，前端会跳 `/challenge` 页面做 Cloudflare Turnstile（备用 Google reCAPTCHA），过了再调 `ClearWatch` 解封。调研期间大约发了一百多个请求，没有触发过。电视上无法完成 Turnstile，触发了只能提示用户。
 - 地区由服务器按 IP 判断，`region` 参数改成 `CN`、`GL.` 或不带，返回的播放地址都一样（里面写的是 IP 所在国）。中国大陆 IP 能否访问没法验证。
 - 未登录只能拿到 576（标清），720 及以上全部 `isVIP:true`。
 
 ## 域名
 
-主包里的域名都是模板 `https://xxx.{Host}/`，`{Host}` 取当前页面的主域名，也就是 `yfsp.tv`。`cinema` 是站点常量，国际版固定为 1，决定了下面这张映射：
+主包里的域名都是模板 `https://xxx.{Host}/`，`{Host}` 取当前页面的主域名，也就是 `kubb.tv`。`cinema` 是站点常量，国际版固定为 1，决定了下面这张映射：
 
 | 主包里的端点名 | 实际地址 | 用途 |
 | --- | --- | --- |
-| `API_ENDPOINT` | `https://m10.yfsp.tv/api` | 列表、筛选、分类、用户 |
-| `APIV3_ENDPOINT` / `APIV4_ENDPOINT` | `https://m10.yfsp.tv/v3` | 首页、详情、选集、播放、菜单 |
-| `APIM10_ENDPOINT` | `https://m10.yfsp.tv/api` | 同 `API_ENDPOINT` |
-| `RANK_ENDPOINT` | `https://rankv21.yfsp.tv/api` | 排行、相关推荐 |
-| `APIV3RANK_ENDPOINT` | `https://rankv21.yfsp.tv/v3` | 搜索、热搜 |
-| `PUBLIC_ENDPOINT` | `https://ppt.yfsp.tv` | 广告投放、点击统计，客户端不需要 |
-| `NEWS_ENDPOINT` | `https://upload.yfsp.tv/api` | 用户上传的短视频（`/watch?v=`），不在范围内 |
+| `API_ENDPOINT` | `https://m10.kubb.tv/api` | 列表、筛选、分类、用户 |
+| `APIV3_ENDPOINT` / `APIV4_ENDPOINT` | `https://m10.kubb.tv/v3` | 首页、详情、选集、播放、菜单 |
+| `APIM10_ENDPOINT` | `https://m10.kubb.tv/api` | 同 `API_ENDPOINT` |
+| `RANK_ENDPOINT` | `https://rankv21.kubb.tv/api` | 排行、相关推荐 |
+| `APIV3RANK_ENDPOINT` | `https://rankv21.kubb.tv/v3` | 搜索、热搜 |
+| `PUBLIC_ENDPOINT` | `https://ppt.kubb.tv` | 广告投放、点击统计，客户端不需要 |
+| `NEWS_ENDPOINT` | `https://upload.kubb.tv/api` | 用户上传的短视频（`/watch?v=`），不在范围内 |
 | `WEBAPI_ENDPOINT` / `ANYGATE_*` | `w.anybound.vip`、`api.anybound.vip`、`c1.anybound.vip` | 播放计数、观看记录（登录后），不需要 |
 | `LIVE_ENDPOINT` | `https://api.miolive.tv/api` | 直播推荐，不需要 |
 
@@ -35,8 +35,8 @@
 
 静态资源：
 
-- 封面图在 `https://static.yfsp.tv/upload/video/*.gif|jpg`，扩展名是 `.gif` 的其实是单帧竖图（350 × 490）。支持 `?w=300&h=420&mode=crop` 服务端缩放，能把体积压小一些。没有防盗链，任意 Referer / Origin 都是 200，带 `Access-Control-Allow-Origin: *`。
-- 轮播和广告图在 `https://pptstatic.yfsp.tv/upload/video/*`。
+- 封面图在 `https://static.kubb.tv/upload/video/*.gif|jpg`，扩展名是 `.gif` 的其实是单帧竖图（350 × 490）。支持 `?w=300&h=420&mode=crop` 服务端缩放，能把体积压小一些。没有防盗链，任意 Referer / Origin 都是 200，带 `Access-Control-Allow-Origin: *`。
+- 轮播和广告图在 `https://pptstatic.kubb.tv/upload/video/*`。
 - 列表项的 `imgPath` 有时带 `s` 后缀（如 `…5588s.gif`），站点会把 `s.` 换成 `.` 取大图，小图版本有的已经 404，客户端照做即可。
 
 ## 通用约定
@@ -106,15 +106,15 @@ POST: body + "&vv=" + vv + "&pub=" + pub        # URL 上的 query 不签
 
 2. pConfig 模式。首页 HTML 内联了 `var injectJson = {"config":[{… "pConfig":{"publicKey":"CJSv…(130 字符)","privateKey":["SvCp…(20 字符)"]}}]}`，Angular 启动后 `shortCut(pConfig)` 把 `pub` 换成这个 `publicKey`，私钥取 `privateKey[0]`。每请求一次首页，这对 key 就换一次。三组样本都满足 `privateKey == publicKey[2:6] + publicKey[1:17]`，但这只是观察，不建议依赖；真要用这种模式就老老实实从 HTML 里解析。
 
-选时间戳模式的理由：不用先抓首页 HTML，不依赖设备时钟，算法完全本地。风险是这条兜底路径哪天被服务端收紧，到时退回 pConfig 模式（多一次 `GET https://www.yfsp.tv/` 再用正则抠 `injectJson`）即可，签名函数本身不用改。
+选时间戳模式的理由：不用先抓首页 HTML，不依赖设备时钟，算法完全本地。风险是这条兜底路径哪天被服务端收紧，到时退回 pConfig 模式（多一次 `GET https://www.kubb.tv/` 再用正则抠 `injectJson`）即可，签名函数本身不用改。
 
 验证：`node mvp/sign-check.mjs` 用浏览器里抓到的 10 个真实请求（两种模式都有，含中文参数）复算 `vv`，全部一致；加 `--live` 会用时间戳模式真打两次 `list/Search`，其中一次带 `region=大陆`。
 
 shell 里调试可以用这个函数（下文的 curl 例子都依赖它）：
 
 ```bash
-# 用法：yfsp 'https://m10.yfsp.tv/api/list/Search?cinema=1&...&v=1'
-yfsp() {
+# 用法：kubb 'https://m10.kubb.tv/api/list/Search?cinema=1&...&v=1'
+kubb() {
   curl -s "$(node -e '
     const c=require("crypto"),P=["version001","vers1on001","vers1on00i","bersion001","vcrsion001","versi0n001","versio_001","version0o1"];
     const u=process.argv[1],[b,q=""]=u.split("?"),ts=Date.now();
@@ -150,7 +150,7 @@ yfsp() {
 ### 首页：getAllVideo
 
 ```bash
-curl -s 'https://m10.yfsp.tv/v3/home/getAllVideo?cinema=1&set=1&size=13&isTopic=1&v=1&cacheable=1'
+curl -s 'https://m10.kubb.tv/v3/home/getAllVideo?cinema=1&set=1&size=13&isTopic=1&v=1&cacheable=1'
 ```
 
 `info[0]` 是一个对象，按频道分组：
@@ -168,7 +168,7 @@ curl -s 'https://m10.yfsp.tv/v3/home/getAllVideo?cinema=1&set=1&size=13&isTopic=
 | --- | --- | --- |
 | `key` | `7C9xxyLBFj6` | 影片 id，11 位，进详情、播放都用它 |
 | `title` | 街头王国：奏响你的声音。 | |
-| `image` | `https://static.yfsp.tv/upload/video/….gif` | 竖版封面 |
+| `image` | `https://static.kubb.tv/upload/video/….gif` | 竖版封面 |
 | `atypeName` | 电影 | 频道名 |
 | `videoClassID` | `0,1,3,28` | 分类路径，前三段是频道 |
 | `cid` / `cidMapper` | 剧情 | 类型 |
@@ -183,7 +183,7 @@ curl -s 'https://m10.yfsp.tv/v3/home/getAllVideo?cinema=1&set=1&size=13&isTopic=
 ### 首页轮播：getflashbanner
 
 ```bash
-yfsp 'https://m10.yfsp.tv/v3/home/getflashbanner?cinema=1&region=US&cid=0,1&size=8&v=1'
+kubb 'https://m10.kubb.tv/v3/home/getflashbanner?cinema=1&region=US&cid=0,1&size=8&v=1'
 ```
 
 不带 `region` 时 `info` 为空数组，要带上 `getmyregion` 拿到的 `regionCode`。首页 HTML 的 `injectJson` 里也内联了一份（键名 `slide-list_region_US_cid_0,1_size_8`）。
@@ -191,17 +191,17 @@ yfsp 'https://m10.yfsp.tv/v3/home/getflashbanner?cinema=1&region=US&cid=0,1&size
 | 字段 | 说明 |
 | --- | --- |
 | `title` | 标题 |
-| `image` / `img` | 横幅图，`pptstatic.yfsp.tv`，约 1903 × 666 |
+| `image` / `img` | 横幅图，`pptstatic.kubb.tv`，约 1903 × 666 |
 | `listPath` | 影片 key，点击进 `/play/{listPath}` |
-| `external` | true 表示是广告（`url` 指向 `ppt.yfsp.tv/c/c?…` 统计跳转），客户端应过滤 |
-| `url` | 站内项是 `https://www.yfsp.tv/play/{key}` |
+| `external` | true 表示是广告（`url` 指向 `ppt.kubb.tv/c/c?…` 统计跳转），客户端应过滤 |
+| `url` | 站内项是 `https://www.kubb.tv/play/{key}` |
 
 实测 8 条里第 1 条是广告，其余 7 条是影片。
 
 ### 频道菜单：MainMenuV3
 
 ```bash
-curl -s 'https://m10.yfsp.tv/v3/list/MainMenuV3?cinema=1&cid=0,1&v=1&cacheable=1'
+curl -s 'https://m10.kubb.tv/v3/list/MainMenuV3?cinema=1&cid=0,1&v=1&cacheable=1'
 ```
 
 `info[0].channelList[]`：`label`（电影）、`path`（movie）、`category`（`0,1,3`）。视频频道的 `category` 就是 `list/Search` 要的 `cid`：
@@ -216,14 +216,14 @@ curl -s 'https://m10.yfsp.tv/v3/list/MainMenuV3?cinema=1&cid=0,1&v=1&cacheable=1
 | 体育 | /list/sport | `0,1,95` |
 | 纪录片 | documentary | `0,1,7` |
 
-后面的「新闻」「华人」「娱乐」等 `category` 不是数字路径，是用户上传区（`upload.yfsp.tv`），不做。
+后面的「新闻」「华人」「娱乐」等 `category` 不是数字路径，是用户上传区（`upload.kubb.tv`），不做。
 
 ### 筛选项：AllVideoType + GetSearchCondition
 
 类型（每个频道不同）：
 
 ```bash
-yfsp 'https://m10.yfsp.tv/api/list/AllVideoType?cinema=1&cid=0,1,3&v=1'
+kubb 'https://m10.kubb.tv/api/list/AllVideoType?cinema=1&cid=0,1,3&v=1'
 ```
 
 `info` 是数组（电影 18 项），每项 `className`（喜剧）、`path`（`0,1,3,19`，用作 `list/Search` 的 `cid`）、`taxis`（排序）。
@@ -231,7 +231,7 @@ yfsp 'https://m10.yfsp.tv/api/list/AllVideoType?cinema=1&cid=0,1,3&v=1'
 其余维度：
 
 ```bash
-yfsp 'https://m10.yfsp.tv/v3/list/GetSearchCondition?version=1&v=1'
+kubb 'https://m10.kubb.tv/v3/list/GetSearchCondition?version=1&v=1'
 ```
 
 `info[0].conditions` 按维度给出选项，每项 `{title, link}`，`link` 是要传给 `list/Search` 的值：
@@ -250,7 +250,7 @@ yfsp 'https://m10.yfsp.tv/v3/list/GetSearchCondition?version=1&v=1'
 ### 分类列表：list/Search
 
 ```bash
-yfsp 'https://m10.yfsp.tv/api/list/Search?cinema=1&page=1&size=36&orderby=0&desc=1&cid=0,1,4&region=%E5%A4%A7%E9%99%86&isserial=-1&isIndex=-1&isfree=-1&isVertical=-1&v=1'
+kubb 'https://m10.kubb.tv/api/list/Search?cinema=1&page=1&size=36&orderby=0&desc=1&cid=0,1,4&region=%E5%A4%A7%E9%99%86&isserial=-1&isIndex=-1&isfree=-1&isVertical=-1&v=1'
 ```
 
 | 参数 | 说明 |
@@ -271,7 +271,7 @@ yfsp 'https://m10.yfsp.tv/api/list/Search?cinema=1&page=1&size=36&orderby=0&desc
 ```bash
 curl -s -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
   --data 'tags=%E7%B9%81%E8%8A%B1' \
-  'https://rankv21.yfsp.tv/v3/list/briefsearch?tags=%E7%B9%81%E8%8A%B1&orderby=4&page=1&size=36&desc=1&isserial=-1&v=1'
+  'https://rankv21.kubb.tv/v3/list/briefsearch?tags=%E7%B9%81%E8%8A%B1&orderby=4&page=1&size=36&desc=1&isserial=-1&v=1'
 ```
 
 站点的做法是关键字同时放在 URL 和 body 里，按 POST 规则签 body（`tags=繁花&vv=…&pub=…`），URL 不签。实测 body 不签名也返回同样结果，客户端还是照站点的方式签上。网页上会同时发两次：不带 `cinema` 的是影视，`cinema=3&cid=0,3` 的是用户上传视频，我们只要前者。
@@ -291,7 +291,7 @@ URL 参数：`orderby`（站点默认 4，含义未细究，按相关度）、`p
 没有输入联想接口。站点的「搜索建议」(`getSearchSuggestList`) 其实就是热搜：
 
 ```bash
-curl -s 'https://rankv21.yfsp.tv/v3/list/gethotsearchlist?cinema=1&size=10&v=1&cacheable=1'
+curl -s 'https://rankv21.kubb.tv/v3/list/gethotsearchlist?cinema=1&size=10&v=1&cacheable=1'
 ```
 
 `info` 是两组数组，每项 `title`（热搜词）、`num`（热度），第一组是影视。
@@ -299,7 +299,7 @@ curl -s 'https://rankv21.yfsp.tv/v3/list/gethotsearchlist?cinema=1&size=10&v=1&c
 ### 详情：video/detail
 
 ```bash
-yfsp 'https://m10.yfsp.tv/v3/video/detail?cinema=1&device=1&player=CkPlayer&tech=HLS&country=HU&lang=cns&v=1&id=uHcU4Clu390&region=US'
+kubb 'https://m10.kubb.tv/v3/video/detail?cinema=1&device=1&player=CkPlayer&tech=HLS&country=HU&lang=cns&v=1&id=uHcU4Clu390&region=US'
 ```
 
 参数照抄站点即可，`id` 是影片 key。`info[0]` 关键字段：
@@ -323,7 +323,7 @@ yfsp 'https://m10.yfsp.tv/v3/video/detail?cinema=1&device=1&player=CkPlayer&tech
 ### 选集：languagesplaylist
 
 ```bash
-yfsp 'https://m10.yfsp.tv/v3/video/languagesplaylist?cinema=1&vid=uHcU4Clu390&lsk=1&taxis=0&cid=0,1,4,132&v=1'
+kubb 'https://m10.kubb.tv/v3/video/languagesplaylist?cinema=1&vid=uHcU4Clu390&lsk=1&taxis=0&cid=0,1,4,132&v=1'
 ```
 
 `info[0]`：`pageSize`（50）、`playListType`、`playList[]`。`lsk` 的含义没查清：抽了 24 部粤语片，`lsk=1` 和 `lsk=0` 下 `info` 都只有一项。语言版本在站点上有两种放法：单独成片（「新闻女王(粤)」），或者作为同一部片里的不同剧集（《叶问3》的 `playList` 是「1(国语)」「1(粤语)」两项）。每集：
@@ -344,9 +344,9 @@ yfsp 'https://m10.yfsp.tv/v3/video/languagesplaylist?cinema=1&vid=uHcU4Clu390&ls
 
 ```bash
 # 默认集：id 用影片 key，a=1
-yfsp 'https://m10.yfsp.tv/v3/video/play?cinema=1&id=uHcU4Clu390&a=1&lang=none&usersign=1&region=US&device=1&isMasterSupport=1&v=1'
+kubb 'https://m10.kubb.tv/v3/video/play?cinema=1&id=uHcU4Clu390&a=1&lang=none&usersign=1&region=US&device=1&isMasterSupport=1&v=1'
 # 指定集：id 用剧集 key，a=0
-yfsp 'https://m10.yfsp.tv/v3/video/play?cinema=1&id=kBI2X7hTHj2&a=0&lang=none&usersign=1&region=US&device=1&isMasterSupport=1&v=1'
+kubb 'https://m10.kubb.tv/v3/video/play?cinema=1&id=kBI2X7hTHj2&a=0&lang=none&usersign=1&region=US&device=1&isMasterSupport=1&v=1'
 ```
 
 `a` 和 `id` 搭配错了会返回 `{"code":1,"msg":"视频不存在"}`。电影也一样：影片 key 配 `a=1`，或从选集列表拿唯一一集的 key 配 `a=0`。
@@ -356,7 +356,7 @@ yfsp 'https://m10.yfsp.tv/v3/video/play?cinema=1&id=kBI2X7hTHj2&a=0&lang=none&us
 | 字段 | 说明 |
 | --- | --- |
 | `clarity[]` | 清晰度，`title`（2160/1080/720/576）、`description`（4K/蓝光/高清/标清）、`isVIP`、`isEnabled`、`key`；只有可播那档 `path` 非空，`path.result` 就是 m3u8 |
-| `flvPathList[]` | 实测两项：第一项是 20 秒前贴片广告（`isHls:false`、`link` 指向 `ppt.yfsp.tv`），第二项是正片（`isHls:true`、`link:null`） |
+| `flvPathList[]` | 实测两项：第一项是 20 秒前贴片广告（`isHls:false`、`link` 指向 `ppt.kubb.tv`），第二项是正片（`isHls:true`、`link:null`） |
 | `mediaKey` / `mediaTitle` | 实际播的那一集 |
 | `customData.t` | 时长（秒） |
 | `needLogin` / `isPreView` / `isLimitedStream` | 样本里都是 0 / false |
@@ -376,27 +376,27 @@ CDN 的请求头要求（实测）：
 | --- | --- |
 | 不带 Origin，UA 为空 / `Mozilla/5.0` / `node` / webOS UA | 200 |
 | UA 是 `curl/*` 或 `python-requests/*` | 403（Cloudflare「Attention Required」页） |
-| 带 `Origin: https://www.yfsp.tv` | 200，`Access-Control-Allow-Origin: *` |
+| 带 `Origin: https://www.kubb.tv` | 200，`Access-Control-Allow-Origin: *` |
 | 带 `Origin: null`、`file://`、`http://localhost:5173`、`http://127.0.0.1:7654` | 520 |
 | 不带 Referer | 200（不需要 Referer） |
 | `Range: bytes=0-1023` | 206，带 `Content-Range` |
 
-所以电视上 hls.js 从 `file://` 发的 XHR 一定带 `Origin: null`，直连必然 520；浏览器开发时 `localhost` 的 Origin 也是 520。媒体要走本地代理，代理出站时不发 Origin（或者写成 `https://www.yfsp.tv`），UA 不要用 curl。
+所以电视上 hls.js 从 `file://` 发的 XHR 一定带 `Origin: null`，直连必然 520；浏览器开发时 `localhost` 的 Origin 也是 520。媒体要走本地代理，代理出站时不发 Origin（或者写成 `https://www.kubb.tv`），UA 不要用 curl。
 
 ### 排行：GetVideoRank / getAllHotVideoTop
 
 完整排行榜（`/rank` 页）：
 
 ```bash
-yfsp 'https://rankv21.yfsp.tv/api/list/GetVideoRank?key=All&cinema=1&v=1'
+kubb 'https://rankv21.kubb.tv/api/list/GetVideoRank?key=All&cinema=1&v=1'
 ```
 
-`info` 是对象，键是 `false_{cid}`（`false_0,1,3` 电影、`false_0,1,4` 电视剧、`false_0,1,5` 综艺、`false_0,1,6` 动漫），每个下面有 `hour` / `day` / `week` / `month` / `year` 五个时段，各 50 条。条目字段：`contxt`（影片 key）、`title`、`imgPath`（相对路径 `/upload/video/…`，前面拼 `https://static.yfsp.tv`）、`cid`、`regional`、`lang`、`viPsource` 等。
+`info` 是对象，键是 `false_{cid}`（`false_0,1,3` 电影、`false_0,1,4` 电视剧、`false_0,1,5` 综艺、`false_0,1,6` 动漫），每个下面有 `hour` / `day` / `week` / `month` / `year` 五个时段，各 50 条。条目字段：`contxt`（影片 key）、`title`、`imgPath`（相对路径 `/upload/video/…`，前面拼 `https://static.kubb.tv`）、`cid`、`regional`、`lang`、`viPsource` 等。
 
 首页右侧的各频道 Top10：
 
 ```bash
-curl -s 'https://rankv21.yfsp.tv/api/list/getAllHotVideoTop?cinema=1&pageSize=10&v=1&cacheable=1'
+curl -s 'https://rankv21.kubb.tv/api/list/getAllHotVideoTop?cinema=1&pageSize=10&v=1&cacheable=1'
 ```
 
 `info[]` 每项 `{cid, rankList[]}`，条目里影片 key 在 `link`，另有 `title`、`score`、`regional`、`updVname`（如 2160p）。没有封面图。
@@ -404,7 +404,7 @@ curl -s 'https://rankv21.yfsp.tv/api/list/getAllHotVideoTop?cinema=1&pageSize=10
 ### 相关推荐：getRelativeVideo
 
 ```bash
-yfsp 'https://rankv21.yfsp.tv/api/home/getRelativeVideo?cinema=1&cid=0,1,4,132&title=%E7%BE%8E%E4%BA%BA%E4%BD%99&size=10&set=1&id=50365&v=1'
+kubb 'https://rankv21.kubb.tv/api/home/getRelativeVideo?cinema=1&cid=0,1,4,132&title=%E7%BE%8E%E4%BA%BA%E4%BD%99&size=10&set=1&id=50365&v=1'
 ```
 
 `cid`、`title`、`id`（数字 id）都来自 `video/detail`。`info` 是影片数组，字段和搜索结果一样：影片 key 在 `contxt`，封面 `imgPath` 带 `s` 后缀。
@@ -412,21 +412,21 @@ yfsp 'https://rankv21.yfsp.tv/api/home/getRelativeVideo?cinema=1&cid=0,1,4,132&t
 ### 地区：getmyregion
 
 ```bash
-yfsp 'https://m10.yfsp.tv/api/home/getmyregion?cinema=1&v=1'
+kubb 'https://m10.kubb.tv/api/home/getmyregion?cinema=1&v=1'
 ```
 
 `info[0]`：`regionCode`（US）、`regionName`（美国）、`ipCountry`。首页 HTML 的 `injectJson["switch-region"]` 里也有同样内容。轮播要用 `regionCode`。
 
 ## 登录（只记录流程，没有登录）
 
-- 登录框是 `DNA-3.0.0.9.js` 生成的 iframe，指向 `https://account.yfsp.tv/Auth/Login`，一个服务端渲染的 ASP.NET 表单：`POST /Auth/Login`，字段 `Email`（邮箱/帐号）或 `AreaCode` + `PhoneNumber`、`UserPass`、`RememberStatus`，另有隐藏字段 `requirecode`（初始为 0，推测失败几次后要求验证码）。
-- 登录成功后靠 `account.yfsp.tv` 的 cookie 做 SSO，主站再通过 `user/UserAutoLogin`、`user/getusertoken` 拿到 token 对象，之后所有请求都把 `uid`、`token` 等字段合进 query 签名。
+- 登录框是 `DNA-3.0.0.9.js` 生成的 iframe，指向 `https://account.kubb.tv/Auth/Login`，一个服务端渲染的 ASP.NET 表单：`POST /Auth/Login`，字段 `Email`（邮箱/帐号）或 `AreaCode` + `PhoneNumber`、`UserPass`、`RememberStatus`，另有隐藏字段 `requirecode`（初始为 0，推测失败几次后要求验证码）。
+- 登录成功后靠 `account.kubb.tv` 的 cookie 做 SSO，主站再通过 `user/UserAutoLogin`、`user/getusertoken` 拿到 token 对象，之后所有请求都把 `uid`、`token` 等字段合进 query 签名。
 - 人机验证不在登录表单里，而在全局：接口返回 `code:5` 时进入 `/challenge`，按首页 `injectJson.config[0].authConfig`（`provider: "CLOUDFLARE"`，Turnstile sitekey `0x4AAAAAACCL7s2rRZySToUJ`）渲染 Turnstile，用户通过后 `POST m10/api/home/ClearWatch`，body 为 `captchaKey={token}&publicKey={sitekey}`。
-- 电视端要做登录的话，需要把账号密码表单搬到电视上，依赖 `account.yfsp.tv` 的 cookie 流程；`file://` 下 cookie 行为不确定，DNA 库里也有 `IsFileSystem` 分支专门处理。登录后非会员能否拿到 720 无法验证，MVP 不做登录。
+- 电视端要做登录的话，需要把账号密码表单搬到电视上，依赖 `account.kubb.tv` 的 cookie 流程；`file://` 下 cookie 行为不确定，DNA 库里也有 `IsFileSystem` 分支专门处理。登录后非会员能否拿到 720 无法验证，MVP 不做登录。
 
 ## 不需要的东西
 
-- `ppt.yfsp.tv/play/o`、`getCoBusiness`、`payment/getPaymentInfo`：广告、合作商、会员价格。
+- `ppt.kubb.tv/play/o`、`getCoBusiness`、`payment/getPaymentInfo`：广告、合作商、会员价格。
 - `video/getBarrage`、`video/commentList`、`video/GetRatingList`、`video/RelativeTopicList`：弹幕、评论、评分分布、相关专题。
 - `w.anybound.vip/api/Counter/PlusOne`：播放计数。
 

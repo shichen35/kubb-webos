@@ -21,7 +21,7 @@ const fs = require('fs');
 const version = process.argv[2];
 for (const file of [
   'app/webos-meta/appinfo.json',
-  'service/com.yfsp.app.service/package.json',
+  'service/com.kubb.app.service/package.json',
 ]) {
   const json = JSON.parse(fs.readFileSync(file, 'utf8'));
   json.version = version;
@@ -42,14 +42,14 @@ cp THIRD_PARTY_NOTICES.md app/dist/
 # 4. Package app + service into a single .ipk. ares-package comes from the
 #    @webos-tools/cli dev dependency in app/, so npm ci is all CI needs.
 mkdir -p out
-app/node_modules/.bin/ares-package --no-minify app/dist service/com.yfsp.app.service -o out
+app/node_modules/.bin/ares-package --no-minify app/dist service/com.kubb.app.service -o out
 
-IPK="out/com.yfsp.app_${VERSION}_all.ipk"
+IPK="out/com.kubb.app_${VERSION}_all.ipk"
 echo "packaged: ${IPK}"
 
 # 5. Homebrew Channel-style manifest, uploaded next to the .ipk by the release
 #    workflow. ipkUrl points at the release asset of tag v$VERSION.
-REPO="${GITHUB_REPOSITORY:-shichen35/yfsp-webos}"
+REPO="${GITHUB_REPOSITORY:-shichen35/kubb-webos}"
 node - "$IPK" "$VERSION" "$REPO" <<'EOF'
 const fs = require('fs');
 const crypto = require('crypto');

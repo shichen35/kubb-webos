@@ -1,6 +1,6 @@
 # 签名与请求信封
 
-网关的响应是明文 JSON，没有载荷加密，所以这一层只有签名和信封两件事。代码在 `app/src/source/yfspSign.js` 和 `yfspHttp.js`。
+网关的响应是明文 JSON，没有载荷加密，所以这一层只有签名和信封两件事。代码在 `app/src/source/kubbSign.js` 和 `kubbHttp.js`。
 
 ## 签名
 
@@ -16,8 +16,8 @@ POST : body + "&vv=" + vv + "&pub=" + pub   （URL 上的 query 原样发送，�
 - `pub` 用当前毫秒时间戳，`privateKey` 从站点内置的 8 项表里按 `pub % 8` 取。这是站点自己的兜底模式，网关不校验时效（前后偏一周都能过），所以不用先抓首页，也不依赖电视时钟。
 - 一定要先规范化再签：直接对百分号编码的原始 query 签名，所有带中文参数的请求（`region=大陆`、搜索词）都会报「用户签名错误」。
 - 参数按发出的顺序签，不排序。
-- 浏览器里没有原生 MD5，`yfspSign.js` 自带一份纯 JS 实现。
-- `yfspSign.test.js` 里有 10 个从浏览器抓到的真实请求做向量，覆盖时间戳模式、首页 `pConfig` 模式和中文参数。
+- 浏览器里没有原生 MD5，`kubbSign.js` 自带一份纯 JS 实现。
+- `kubbSign.test.js` 里有 10 个从浏览器抓到的真实请求做向量，覆盖时间戳模式、首页 `pConfig` 模式和中文参数。
 
 备用方案是解析首页 HTML 里内联的 `pConfig`（每次请求首页都会换），签名函数不用改，只换 `pub` 和 `privateKey` 的来源。等兜底模式真被收紧再加。
 

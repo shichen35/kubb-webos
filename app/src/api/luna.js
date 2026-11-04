@@ -16,7 +16,7 @@
  * — the ping times out there and the API stays on direct fetch.
  */
 
-const SERVICE = 'com.yfsp.app.service'
+const SERVICE = 'com.kubb.app.service'
 // Where `npm run proxy` listens during development (service.js DEFAULT_PORT).
 const DEV_PROXY = 'http://127.0.0.1:7654'
 const PING_TIMEOUT_MS = 2000
@@ -132,7 +132,7 @@ async function directPost(url, body, opts = {}) {
   return res.text()
 }
 
-// Real-device Luna transport: the service fetches m10/rankv21.yfsp.tv and
+// Real-device Luna transport: the service fetches m10/rankv21.kubb.tv and
 // returns decompressed text. The URL arrives fully built (and vv-signed for GET).
 async function lunaFetch(url, method = 'GET', body) {
   const params = method === 'POST' ? { url, method, body } : { url }

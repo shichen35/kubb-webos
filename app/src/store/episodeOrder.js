@@ -14,7 +14,7 @@
  */
 import { createStore } from '../hooks/useStore.js'
 
-export const episodeOrderStore = createStore('yfsp:epOrder', {})
+export const episodeOrderStore = createStore('kubb:epOrder', {})
 
 export function isAscending(id) {
   return !!episodeOrderStore.get()[id]

@@ -1,12 +1,12 @@
-# 视频源调研：yfsp.tv 的播放地址与电视端播放方案
+# 视频源调研：kubb.tv 的播放地址与电视端播放方案
 
 调研时间 2026-10-28，出口 IP 在美国（`region=US`）。样本是电视剧《美人余》（`uHcU4Clu390`）第 1、2 集，另抽查了两部电影（`6rCfqz37jLG`、`X4r3180qOd2`），全程未登录。文中把客户端 IP 写成 `<client-ip>`。
 
 ## 结论先说
 
 - 能播。免费档是 576（标清），普通 HLS、MPEG-TS 分片、没有 `#EXT-X-KEY`，分片也没有伪装成图片，hls.js 直接吃。
-- 必须走本地媒体代理，原因和 olevod 正好相反：CDN 不要 Referer，但只要带了不在白名单里的 `Origin`（包括 `null`、`file://`、`http://localhost`）或外站 `Referer`，Cloudflare 就回 520。电视上打包应用跑在 `file://`，hls.js 用 XHR 拉流时浏览器一定会带 `Origin: null`，所以直连必挂。代理只需要做一件事：出站时去掉 Origin（Referer 可以不带，或者带 `https://www.yfsp.tv/`）。
-- API 不需要 Luna 中转也能通：`m10.yfsp.tv` 对任意 Origin（包括 `null`）都回显 `Access-Control-Allow-Origin`。沿用 olevod 的 Luna `fetch` 也没问题，二选一，下面会说取舍。
+- 必须走本地媒体代理，原因和 olevod 正好相反：CDN 不要 Referer，但只要带了不在白名单里的 `Origin`（包括 `null`、`file://`、`http://localhost`）或外站 `Referer`，Cloudflare 就回 520。电视上打包应用跑在 `file://`，hls.js 用 XHR 拉流时浏览器一定会带 `Origin: null`，所以直连必挂。代理只需要做一件事：出站时去掉 Origin（Referer 可以不带，或者带 `https://www.kubb.tv/`）。
+- API 不需要 Luna 中转也能通：`m10.kubb.tv` 对任意 Origin（包括 `null`）都回显 `Access-Control-Allow-Origin`。沿用 olevod 的 Luna `fetch` 也没问题，二选一，下面会说取舍。
 - 签名很简单，前端纯函数就能算：`vv = md5(pub + "&" + canonical(query).toLowerCase() + "&" + privateKey)`（`canonical` 先把各参数值 URL 解码，中文参数不解码会签错），`pub` 可以就是当前毫秒时间戳，不用先抓页面。
 - 产品上要注意：未登录时 720 / 1080 / 4K 全部标着 VIP，只能拿到 576。实测《美人余》576 档是 864 × 362、约 550 kbps，在大电视上会比较糊。登录后的非会员是否能拿到 720 没法验证（不登录是调研规则）。
 
@@ -16,9 +16,9 @@
 
 打开播放页后和视频相关的请求顺序：
 
-1. `GET https://m10.yfsp.tv/v3/video/detail?cinema=1&device=1&player=CkPlayer&tech=HLS&country=HU&lang=cns&v=1&id={videoId}&region=US&vv=…&pub=…` 影片详情。
-2. `GET https://m10.yfsp.tv/v3/video/languagesplaylist?cinema=1&vid={videoId}&lsk=1&taxis=0&cid=0,1,4,132&v=1&vv=…&pub=…` 剧集列表，每集有 `key`（11 位）、`name`（"01"、"1080P" 之类）、`isVip`。
-3. `GET https://m10.yfsp.tv/v3/video/play?cinema=1&id=…&a=…&lang=none&usersign=1&region=US&device=1&isMasterSupport=1&v=1&vv=…&pub=…` 取播放地址，这是唯一要关心的接口。
+1. `GET https://m10.kubb.tv/v3/video/detail?cinema=1&device=1&player=CkPlayer&tech=HLS&country=HU&lang=cns&v=1&id={videoId}&region=US&vv=…&pub=…` 影片详情。
+2. `GET https://m10.kubb.tv/v3/video/languagesplaylist?cinema=1&vid={videoId}&lsk=1&taxis=0&cid=0,1,4,132&v=1&vv=…&pub=…` 剧集列表，每集有 `key`（11 位）、`name`（"01"、"1080P" 之类）、`isVip`。
+3. `GET https://m10.kubb.tv/v3/video/play?cinema=1&id=…&a=…&lang=none&usersign=1&region=US&device=1&isMasterSupport=1&v=1&vv=…&pub=…` 取播放地址，这是唯一要关心的接口。
 4. 拉 m3u8，再拉 `media_N.ts`。
 
 `play` 的 `id` / `a` 有两种组合，搞错会返回 `{"code":1,"msg":"视频不存在"}`：
@@ -34,7 +34,7 @@
 
 外层是 `{"ret":200,"data":{"code":0,"msg":"","info":[{...}]}}`，`data` 是明文 JSON，没有 olevod 那样的 AES 载荷。`info[0]` 里有用的字段：
 
-- `flvPathList`：数组。实测总是两项，第一项是前贴片广告（`isHls:false`、`result` 指向 `s1-a1.global-cdn.me/vod/*.mp4`、`link` 是 `ppt.yfsp.tv` 的点击统计、`duration:20`，配合 `maxFrontAds:1`），第二项才是正片（`isHls:true`、`link:null`）。
+- `flvPathList`：数组。实测总是两项，第一项是前贴片广告（`isHls:false`、`result` 指向 `s1-a1.global-cdn.me/vod/*.mp4`、`link` 是 `ppt.kubb.tv` 的点击统计、`duration:20`，配合 `maxFrontAds:1`），第二项才是正片（`isHls:true`、`link:null`）。
 - 正片项的 `result` 和 `rtmp` 是同一个 m3u8，`dashResult` 是同路径的 `manifest.mpd`，`needSign:false`、`validator:null`、`backup:""`。
 - `clarity`：清晰度列表，每项有 `title`（2160/1080/720/576）、`description`（4K/蓝光/高清/标清）、`isVIP`、`isEnabled`、`key`，只有当前可播的那一档 `path` 非空，内容和 `flvPathList` 里的正片项相同。
 - `customData.t` 是时长（秒），`customData.v` 是宽高比（如 `"864:362"`）。
@@ -63,7 +63,7 @@ url = url + '&vv=' + vv + '&pub=' + publicKey
 
 两种都实测能过 `play`。电视端用第 2 种，不用先抓 HTML。每次请求现算，不复用。签名错误时返回 `{"code":1,"msg":"用户签名错误"}`；`data.code === 5` 时站点会跳 `/challenge` 页（Cloudflare Turnstile 人机验证），电视端没法完成，只能提示失败，这是一个潜在风险，调研期间没触发过。
 
-`rankv21.yfsp.tv` 下的部分列表接口（如 `gethotsearchlist`、`getCoBusiness`）站点自己都不签名，带 `cacheable=1`。
+`rankv21.kubb.tv` 下的部分列表接口（如 `gethotsearchlist`、`getCoBusiness`）站点自己都不签名，带 `cacheable=1`。
 
 ## m3u8 和分片
 
@@ -97,7 +97,7 @@ media_0.ts?vCustomParameter=…&lb=…&ab=a&verify=1793248072-{base64 HMAC}
 - 分片是标准 MPEG-TS，首字节 `0x47`，`Content-Type: video/MP2T`，没有 PNG 头要剥。样本分片约 11 秒、766 KB。
 - 响应头：`access-control-allow-origin: *`、`accept-ranges: bytes`（`Range` 返回 206）、分片 `cache-control: max-age=2147483648`，m3u8 `max-age=7200`、`vary: accept-encoding`。
 
-站点还有一个悬停预览接口 `https://upload.yfsp.tv/api/video/MasterPlayList?id={mediaKey}`，不签名，返回一个带 20 个 `STREAM-INF` 的 master，每项指向不同的随机域名（`s100-e1.streampluxb.vip`、`s100-e1.globenete.vip`、`s100-e1.netsecurec.vip` 等），分片是跨域名的绝对地址，总长约 147 秒，各档 key 返回的内容相同，就是预告片段。正片用不到，但它说明这家 CDN 的域名是随机生成、会轮换的，代理白名单不能按固定后缀写死。
+站点还有一个悬停预览接口 `https://upload.kubb.tv/api/video/MasterPlayList?id={mediaKey}`，不签名，返回一个带 20 个 `STREAM-INF` 的 master，每项指向不同的随机域名（`s100-e1.streampluxb.vip`、`s100-e1.globenete.vip`、`s100-e1.netsecurec.vip` 等），分片是跨域名的绝对地址，总长约 147 秒，各档 key 返回的内容相同，就是预告片段。正片用不到，但它说明这家 CDN 的域名是随机生成、会轮换的，代理白名单不能按固定后缀写死。
 
 ## CDN 访问校验（curl 实测）
 
@@ -107,14 +107,14 @@ media_0.ts?vCustomParameter=…&lb=…&ab=a&verify=1793248072-{base64 HMAC}
 | --- | --- |
 | 不带 Referer、不带 Origin，UA 为浏览器 / webOS / `node` / 空 | 200 |
 | UA 为 curl 默认（`curl/x.y`） | 403，Cloudflare「Attention Required」 |
-| `Origin: https://www.yfsp.tv`、`https://yfsp.tv`、`https://m.yfsp.tv`、`https://www.iyf.tv` | 200 |
+| `Origin: https://www.kubb.tv`、`https://kubb.tv`、`https://m.kubb.tv`、`https://www.iyf.tv` | 200 |
 | `Origin: null` / `file://` / `http://localhost` / `http://127.0.0.1:7654` / `https://example.com` | 520 |
 | `Referer: https://example.com/`、`Referer: file:///…`、olevod 的 `Referer: https://www.olevod.com/` | 520 |
-| `Referer: https://www.yfsp.tv/` | 200 |
+| `Referer: https://www.kubb.tv/` | 200 |
 
 也就是说 CDN 对 Origin / Referer 是「不带可以、带就得是自家域名」。不校验 cookie。时效靠 `vendtime` + `vhash`（m3u8）和 `verify`（分片）。
 
-API 网关 `m10.yfsp.tv`：只认 `vv` / `pub`，`Origin: null` 和外站 Origin 都放行并回显到 `Access-Control-Allow-Origin`，curl 默认 UA 也能访问。
+API 网关 `m10.kubb.tv`：只认 `vv` / `pub`，`Origin: null` 和外站 Origin 都放行并回显到 `Access-Control-Allow-Origin`，curl 默认 UA 也能访问。
 
 海外和国内的差异没法验证（只有美国出口）。`play` 请求带 `region`，返回地址里的 `vCustomParameter` 带国家码，CDN 节点大概率按地区分配，国内出口可能拿到别的域名。
 
@@ -139,7 +139,7 @@ https://{host}{path}?{query}  ->  http://127.0.0.1:{port}/proxy/{host}{path}?{qu
 代理出站头：
 
 - 不发 `Origin`，也不转发客户端的 `Origin` / `Referer` / `Cookie`；
-- `Referer` 不带，或固定为 `https://www.yfsp.tv/`（两种都实测 200，建议不带，少一个指纹）；
+- `Referer` 不带，或固定为 `https://www.kubb.tv/`（两种都实测 200，建议不带，少一个指纹）；
 - `User-Agent` 固定一个 webOS / Chrome UA，Node 默认不发 UA 也行，但不能出现 `curl`；
 - 透传 `Range`；
 - `Accept-Encoding: identity`（m3u8 有 `vary: accept-encoding`，代理是字节透传，不能让上游给 gzip）。
@@ -150,14 +150,14 @@ m3u8 内容：正片是相对分片路径，不需要改写。为了防御将来
 
 白名单：CDN 域名是随机的 `.vip` 域名，固定后缀列表维护不了。建议两种做法选一：
 
-1. 前端在拿到 `play` 结果后把正片 host 通过 Luna 注册给服务（动态白名单），代理只放行注册过的 host 及 `*.yfsp.tv`；
-2. 简单版：放行 `*.yfsp.tv`、`*.global-cdn.me` 和所有 `.vip` 域名，同时要求路径匹配 `^/ppotb\w*-[^/]+/(chunklist\.m3u8|media_\d+\.ts)$`。
+1. 前端在拿到 `play` 结果后把正片 host 通过 Luna 注册给服务（动态白名单），代理只放行注册过的 host 及 `*.kubb.tv`；
+2. 简单版：放行 `*.kubb.tv`、`*.global-cdn.me` 和所有 `.vip` 域名，同时要求路径匹配 `^/ppotb\w*-[^/]+/(chunklist\.m3u8|media_\d+\.ts)$`。
 
 代理只监听 127.0.0.1，两种都不会变成对外开放代理，第 1 种更严。
 
 ### API 走哪条路
 
-`m10.yfsp.tv` 对 `Origin: null` 放行，webview 里直接 `fetch` 就行，不需要 Luna `fetch`。保留 Luna 通道的理由只有一个：将来如果网关开始挡 `Origin: null` 或开启 Cloudflare 挑战，可以在服务端换头。建议架构上保留 olevod 的 `transportGet()` 分层（设备上优先 Luna、失败退直连），实现成本低，出事时只改服务端。
+`m10.kubb.tv` 对 `Origin: null` 放行，webview 里直接 `fetch` 就行，不需要 Luna `fetch`。保留 Luna 通道的理由只有一个：将来如果网关开始挡 `Origin: null` 或开启 Cloudflare 挑战，可以在服务端换头。建议架构上保留 olevod 的 `transportGet()` 分层（设备上优先 Luna、失败退直连），实现成本低，出事时只改服务端。
 
 ### 播放器侧要改的地方
 
@@ -176,7 +176,7 @@ KEYS = ["version001","vers1on001","vers1on00i","bersion001","vcrsion001","versi0
 ts = int(time.time() * 1000); pub = str(ts)
 q = "cinema=1&id=uHcU4Clu390&a=1&lang=none&usersign=1&region=US&device=1&isMasterSupport=1&v=1"
 vv = md5((pub + "&" + q.lower() + "&" + KEYS[ts % 8]).encode()).hexdigest()
-url = "https://m10.yfsp.tv/v3/video/play?" + q + "&vv=" + vv + "&pub=" + pub
+url = "https://m10.kubb.tv/v3/video/play?" + q + "&vv=" + vv + "&pub=" + pub
 ```
 
 ## 没验证的

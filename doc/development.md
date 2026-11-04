@@ -42,7 +42,7 @@ node scripts/smoke.mjs       # 冒烟：真实请求走一遍列表、详情、�
 ## 打包
 
 ```bash
-bash build.sh                     # 产物在 out/：.ipk 和 com.yfsp.app.manifest.json
+bash build.sh                     # 产物在 out/：.ipk 和 com.kubb.app.manifest.json
 VERSION=1.0.2 bash build.sh       # 指定版本号
 ```
 

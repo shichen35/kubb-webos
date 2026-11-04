@@ -23,7 +23,13 @@ export function createStore(key, defaultValue) {
 
   function read() {
     try {
-      const raw = localStorage.getItem(key)
+      let raw = localStorage.getItem(key)
+      // Data saved before the yfsp -> kubb rename lives under the old prefix: move it over once.
+      const legacy = key.replace(/^kubb:/, 'yfsp:')
+      if (raw == null && legacy !== key && (raw = localStorage.getItem(legacy)) != null) {
+        localStorage.setItem(key, raw)
+        localStorage.removeItem(legacy)
+      }
       if (raw == null) return defaultValue
       return JSON.parse(raw)
     } catch {

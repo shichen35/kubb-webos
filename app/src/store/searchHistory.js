@@ -6,7 +6,7 @@ import { createStore } from '../hooks/useStore.js'
 
 const LIMIT = 20
 
-export const searchHistoryStore = createStore('yfsp:searchHistory', [])
+export const searchHistoryStore = createStore('kubb:searchHistory', [])
 
 /** Record a committed search; an existing entry moves back to the front. */
 export function remember(word) {

@@ -13,7 +13,7 @@ const DEFAULTS = {
   smoothScroll: true, // animate scroll on focus move (useFocus); off = instant 'auto'
 }
 
-export const settingsStore = createStore('yfsp:settings', DEFAULTS)
+export const settingsStore = createStore('kubb:settings', DEFAULTS)
 
 export function getSetting(snapshot, key) {
   return snapshot[key] ?? DEFAULTS[key]

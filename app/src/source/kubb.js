@@ -1,5 +1,5 @@
 /*
- * yfsp business API + field normalization. Pages and feeds.js see only the
+ * kubb business API + field normalization. Pages and feeds.js see only the
  * domain model below (via source/index.js), never the gateway's field names.
  *
  *   Summary  { id, name, pic, score, remarks, year, area, lang, uhd }
@@ -12,10 +12,10 @@
  *   Page     { items: Summary[], total, page, size, maxPage }
  *   Banner   { id, name, pic }
  */
-import { apiGet, apiPost, ApiError, HOST, isChallenged } from './yfspHttp.js'
+import { apiGet, apiPost, ApiError, HOST, isChallenged } from './kubbHttp.js'
 import { CATEGORIES } from '../config/taxonomy.js'
 
-const IMG_BASE = 'https://static.yfsp.tv'
+const IMG_BASE = 'https://static.kubb.tv'
 
 // Params the site sends with every play/detail request.
 const PLAY_PARAMS = { lang: 'none', usersign: 1, region: 'US', device: 1, isMasterSupport: 1 }

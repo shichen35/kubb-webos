@@ -6,7 +6,7 @@
 
 设计依据是 [架构概览](architecture.md)。任务后面标了它依赖的决策（D1–D11）和开发中验证的问题（Q1–Q10），编号对应架构文档第 13 节。标了 D 的任务要等用户拍板后才能动；标了 Q 的任务可以先做，但完成标准里包含对那个问题的验证，结果写回架构文档。
 
-拷贝 olevod 文件时一律把 `olevod` 前缀、服务名、日志路径改成 `yfsp`，文件清单见 [olevod 复用地图](research/olevod-reuse.md) 第五节，下文不再重复列每个文件名。复用地图里标「原样」的文件不一定能单独编译：olevod 的模块之间有 import 链（`store/filters.js` 要 taxonomy 的 `DEFAULT_LETTER`，`Thumb.jsx` 要 `api/olevod.js` 的 `imageUrl`，`App.jsx` 要 `store/session.js` 和 `api/feeds.js`），M0 用占位导出和桩把链条接上，到对应任务再换成真的。
+拷贝 olevod 文件时一律把 `olevod` 前缀、服务名、日志路径改成 `kubb`，文件清单见 [olevod 复用地图](research/olevod-reuse.md) 第五节，下文不再重复列每个文件名。复用地图里标「原样」的文件不一定能单独编译：olevod 的模块之间有 import 链（`store/filters.js` 要 taxonomy 的 `DEFAULT_LETTER`，`Thumb.jsx` 要 `api/olevod.js` 的 `imageUrl`，`App.jsx` 要 `store/session.js` 和 `api/feeds.js`），M0 用占位导出和桩把链条接上，到对应任务再换成真的。
 
 ## 进度（2026-10-29）
 
@@ -33,7 +33,7 @@ M0 到 M5 的提交都已完成，以下几项没做或没法在本机做：
 ### M0-2 前端工程
 
 - 文件：`app/package.json`、`app/vite.config.js`、`app/index.html`、`app/src/main.jsx`、`app/src/App.jsx`（只渲染背景和一行字）、`app/src/styles/index.css`、`app/webos-meta/appinfo.json`、占位图标。
-- 要点：`appinfo.json` 的 id 是 `com.yfsp.app`；`index.css` 拷 olevod 后把颜色令牌换成架构文档第 11 节的值，焦点描边改成主色。
+- 要点：`appinfo.json` 的 id 是 `com.kubb.app`；`index.css` 拷 olevod 后把颜色令牌换成架构文档第 11 节的值，焦点描边改成主色。
 - 完成标准：`npm install && npm run build` 通过；`npm run sim` 打开是 `#090b21` 背景的空页面。
 - 依赖：D9、D10（title 可先写占位，M5 再定）。
 
@@ -41,7 +41,7 @@ M0 到 M5 的提交都已完成，以下几项没做或没法在本机做：
 
 - 文件：`app/src/hooks/*`、`app/src/store/` 下除 `session.js`、`vault.js` 以外的全部文件和测试、`app/src/config/taxonomy.js`（占位）。
 - 要点：`store/filters.js` import 了 taxonomy 的 `DEFAULT_SORT`、`DEFAULT_LETTER`，所以 taxonomy 在这里先建：七个频道的 id、名称、`cid`，导出形状和 olevod 一致（`CATEGORIES`、`SORTS`、`LETTERS`、`DEFAULT_SORT`、`DEFAULT_LETTER`、`getCategory`），每个分类的 `genres` / `areas` / `years` 先给空数组。`filters.js` 原样拷，M2-3 再换维度。
-- 完成标准：`node --test` 全部通过（含 `filters.test.js`）；存储键前缀是 `yfsp:`。
+- 完成标准：`node --test` 全部通过（含 `filters.test.js`）；存储键前缀是 `kubb:`。
 
 ### M0-4 组件
 
@@ -62,33 +62,33 @@ M0 到 M5 的提交都已完成，以下几项没做或没法在本机做：
 
 ### M1-1 签名
 
-- 文件：`app/src/source/yfspSign.js`、`yfspSign.test.js`。
+- 文件：`app/src/source/kubbSign.js`、`kubbSign.test.js`。
 - 要点：md5 拷 olevod `sign.js`；测试向量用 `mvp/sign-check.mjs` 里的 10 组浏览器真实请求（含中文参数、两种密钥模式）。
 - 完成标准：10 组向量全部一致。
 
 ### M1-2 传输层
 
 - 文件：`app/src/api/luna.js`。
-- 要点：`SERVICE` 改成 `com.yfsp.app.service`；`transportGet` / `transportPost` 保留 olevod 的分层，`isTV && serviceReady` 时走 Luna `fetch`，失败或其他环境直连（POST 用 `application/x-www-form-urlencoded`，属于简单请求，没有预检）；去掉 `initTvEnv()` 开头的 `if (!isTV) return`，Luna 握手失败后再试一次 `http://127.0.0.1:7654/ping`；`mediaUrl()` 去掉 `isTV` 前置条件，拿到代理端口就改写地址。
+- 要点：`SERVICE` 改成 `com.kubb.app.service`；`transportGet` / `transportPost` 保留 olevod 的分层，`isTV && serviceReady` 时走 Luna `fetch`，失败或其他环境直连（POST 用 `application/x-www-form-urlencoded`，属于简单请求，没有预检）；去掉 `initTvEnv()` 开头的 `if (!isTV) return`，Luna 握手失败后再试一次 `http://127.0.0.1:7654/ping`；`mediaUrl()` 去掉 `isTV` 前置条件，拿到代理端口就改写地址。
 - 完成标准：build 通过；浏览器里控制台能看到当前是哪种模式（Luna、直连加 HTTP 代理、直连无代理）。
 - 依赖：D2。
 
 ### M1-3 请求信封
 
-- 文件：`app/src/source/yfspHttp.js`、`yfspHttp.test.js`。
+- 文件：`app/src/source/kubbHttp.js`、`kubbHttp.test.js`。
 - 要点：主机常量（`m10`、`rankv21`）、追加 `v=1` 后签名（`cinema` 不由信封追加，业务函数照站点参数写，影视搜索和 `GetSearchCondition` 本来就不带）、解包 `data.info`、`ApiError(msg, code)`、GET 超时重试和每次重签、POST 不重试；code 4 按通用 `ApiError`、用 `msg` 作文案；code 5 置一个全局标志，之后的预取直接停。
 - 完成标准：单测覆盖成功、code 1、code 4、code 5、HTTP 错误五种响应（用脱敏后的 JSON 夹具）；签名用例含中文参数。
 
 ### M1-4 本地媒体代理
 
-- 文件：`service/com.yfsp.app.service/{service.js,package.json,services.json}`，`app/package.json` 加 `proxy` 脚本（`node ../service/com.yfsp.app.service/service.js`）。
-- 要点：骨架拷 olevod，按架构文档第 3 节改出站头和媒体白名单（按解析后的 `hostname` 校验、拒绝 userinfo）；Luna `fetch` 保留，接口白名单换成 `m10.yfsp.tv`、`rankv21.yfsp.tv`；HTTP 增加 `GET /ping` 返回端口，响应带 `Access-Control-Allow-Origin: *`（开发页面在 `localhost:5173`，跨源读它需要）；没有 `webos-service` 模块时只启动代理，固定 7654。
+- 文件：`service/com.kubb.app.service/{service.js,package.json,services.json}`，`app/package.json` 加 `proxy` 脚本（`node ../service/com.kubb.app.service/service.js`）。
+- 要点：骨架拷 olevod，按架构文档第 3 节改出站头和媒体白名单（按解析后的 `hostname` 校验、拒绝 userinfo）；Luna `fetch` 保留，接口白名单换成 `m10.kubb.tv`、`rankv21.kubb.tv`；HTTP 增加 `GET /ping` 返回端口，响应带 `Access-Control-Allow-Origin: *`（开发页面在 `localhost:5173`，跨源读它需要）；没有 `webos-service` 模块时只启动代理，固定 7654。
 - 完成标准：`npm run proxy` 后，用 curl 经代理拿到 m3u8 和首个分片（首字节 `0x47`），m3u8 地址先用 `mvp/probe.cjs` 取；白名单外的 host 和 `/proxy/pipecdn.vip:x@example.com/` 都返回 403；带 `Range` 的请求返回 206 且有 `Content-Range`；浏览器里 `fetch('http://127.0.0.1:7654/ping')` 能读到端口；用这个代理（不带 Referer、m3u8 不改写）配 hls.js light 在浏览器里实际播一段，`currentTime` 前进。
 - 依赖：D2、D8。
 
 ### M1-5 适配器：详情与取址
 
-- 文件：`app/src/source/{index.js,yfsp.js}`、`yfsp.test.js`（归一化测试，夹具取自调研时的响应，去掉 IP 和令牌）。
+- 文件：`app/src/source/{index.js,kubb.js}`、`kubb.test.js`（归一化测试，夹具取自调研时的响应，去掉 IP 和令牌）。
 - 内容：`detail`（`video/detail` 加 `languagesplaylist?taxis=1`）、`resolveStream`、`imageUrl`、`toSummary`。
 - 要点：选集只取 `info[0]`（Q10）；Summary 带 `uhd`（`vipResource` 为 `4K` 或 `2K`）。
 - 完成标准：《美人余》（`uHcU4Clu390`）和《海贼王》（`Jov3Yy1Hm6G`，1182 项，SP01–SP04 排在 1180 之后）的剧集 `index` 连续、数组新的在前；剧集 key 配 `a=0` 能取到第 1 集和最后一集的地址；VIP 集抛出的 `ApiError` 文案正确。
@@ -96,7 +96,7 @@ M0 到 M5 的提交都已完成，以下几项没做或没法在本机做：
 
 ### M1-6 适配器：列表、首页、搜索、排行
 
-- 文件：`app/src/source/yfsp.js`、`yfsp.test.js`。
+- 文件：`app/src/source/kubb.js`、`kubb.test.js`。
 - 内容：`categoryList`、`homeShelves`、`homeBanners`（先取 `getmyregion`，过滤 `external`）、`searchHotKeywords`、`searchList`、`rankList`。
 - 完成标准：各函数用夹具测试归一化；实际请求一次 `orderby=0` 和 `orderby=1`，按返回条目的日期确认含义；试一次拼音首字母搜索（如 `qyn`）看 `briefsearch` 能不能命中。
 - 验证：Q1、Q7。
@@ -209,7 +209,7 @@ M0 到 M5 的提交都已完成，以下几项没做或没法在本机做：
 
 - 文件：`build.sh`、`app/webos-meta/{appinfo.json,icon.png,largeIcon.png}`。
 - 要点：`build.sh` 换掉三处服务路径和默认仓库名；图标是 80×80 和 130×130 的真 PNG，自己画，不用站点 logo。
-- 完成标准：`bash build.sh` 产出 `out/com.yfsp.app_<ver>_all.ipk`，`ares-package` 不报错。
+- 完成标准：`bash build.sh` 产出 `out/com.kubb.app_<ver>_all.ipk`，`ares-package` 不报错。
 - 依赖：D10。
 
 ### M5-2 开发文档

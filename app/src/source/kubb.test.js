@@ -1,15 +1,15 @@
-// Run: node --test src/source/yfsp.test.js
+// Run: node --test src/source/kubb.test.js
 // Fixtures are trimmed copies of real responses (2026-10-29), with the stream
 // tokens and client IP replaced.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { categoryList, detail, homeBanners, imageUrl, rankList, resolveStream, searchHotKeywords, searchList, searchSuggest, toSummary } from './yfsp.js'
+import { categoryList, detail, homeBanners, imageUrl, rankList, resolveStream, searchHotKeywords, searchList, searchSuggest, toSummary } from './kubb.js'
 
 const ok = (info) => JSON.stringify({ ret: 200, data: { code: 0, msg: '', info } })
 
 const DETAIL = {
   id: 50365, key: 'uHcU4Clu390', title: '美人余', contxt: '好命富家女余梦险遭赘婿丈夫吃绝户',
-  imgPath: 'https://static.yfsp.tv/upload/video/4e36c65af3504c21a3345729b3eddba3.gif',
+  imgPath: 'https://static.kubb.tv/upload/video/4e36c65af3504c21a3345729b3eddba3.gif',
   cid: '0,1,4,132', cidMapper: '都市,家庭,爱情', regional: '大陆', language: '国语', post_Year: '2026',
   stars: ['王佳佳', '李一桐'], directors: [], score: '8.1', lastName: '28集全', view: 4374007,
 }
@@ -25,7 +25,7 @@ const PLAY = {
     { title: '576', description: '标清', isVIP: false, isEnabled: true, path: { result: M3U8 } },
   ],
   flvPathList: [
-    { isHls: false, link: 'https://ppt.yfsp.tv/c/c', result: 'https://global-cdn.me/ad.mp4' },
+    { isHls: false, link: 'https://ppt.kubb.tv/c/c', result: 'https://global-cdn.me/ad.mp4' },
     { isHls: true, link: null, result: M3U8 },
   ],
 }
@@ -77,16 +77,16 @@ test('a VIP episode with no playable tier throws a VIP message', async (t) => {
 
 test('imageUrl adds the static host and the CDN resize params', () => {
   assert.equal(imageUrl(''), '')
-  assert.equal(imageUrl('/upload/video/a.gif'), 'https://static.yfsp.tv/upload/video/a.gif')
-  assert.equal(imageUrl('https://static.yfsp.tv/a.gif', '384x560'), 'https://static.yfsp.tv/a.gif?w=384&h=560&format=jpg&mode=crop')
+  assert.equal(imageUrl('/upload/video/a.gif'), 'https://static.kubb.tv/upload/video/a.gif')
+  assert.equal(imageUrl('https://static.kubb.tv/a.gif', '384x560'), 'https://static.kubb.tv/a.gif?w=384&h=560&format=jpg&mode=crop')
 })
 
 const LIST_ITEM = {
-  key: 'kNyFnqHa7LB', title: '敦煌英雄', image: 'https://static.yfsp.tv/upload/video/c45.gif', rating: '6.0', score: '6.0',
+  key: 'kNyFnqHa7LB', title: '敦煌英雄', image: 'https://static.kubb.tv/upload/video/c45.gif', rating: '6.0', score: '6.0',
   lastName: '', year: 2026, regional: '大陆', lang: '国语', vipResource: '4K', contxt: '简介不是 key',
 }
 const SEARCH_ITEM = {
-  contxt: 'U15q33LhS28', title: '海上繁花', imgPath: 'https://static.yfsp.tv/upload/video/2021s.gif', score: '6.7', rating: 667,
+  contxt: 'U15q33LhS28', title: '海上繁花', imgPath: 'https://static.kubb.tv/upload/video/2021s.gif', score: '6.7', rating: 667,
   lastName: '41集全', postTime: '2021-01-01T00:00:00', regional: '大陆', lang: '国语', vipResource: '720P',
 }
 const RANK_ITEM = { contxt: 'uE22Zj9bavD', title: '空枪', imgPath: '/upload/video/f0c.gif', score: '7.9', year: '2026', viPsource: '2160p' }
@@ -100,7 +100,7 @@ test('list, search and ranking items normalize to the same Summary', async (t) =
   const [list] = (await categoryList({ cid: '0,1,3' })).items
   assert.deepEqual(list, { id: 'kNyFnqHa7LB', name: '敦煌英雄', pic: LIST_ITEM.image, score: 6, remarks: '', year: '2026', area: '大陆', lang: '国语', uhd: true })
   const [found] = (await searchList({ keyword: '繁花' })).items
-  assert.deepEqual([found.id, found.pic, found.score, found.year, found.uhd], ['U15q33LhS28', 'https://static.yfsp.tv/upload/video/2021.gif', 6.7, '2021', false])
+  assert.deepEqual([found.id, found.pic, found.score, found.year, found.uhd], ['U15q33LhS28', 'https://static.kubb.tv/upload/video/2021.gif', 6.7, '2021', false])
   const rank = await rankList()
   assert.deepEqual(Object.keys(rank), ['movie'])
   assert.deepEqual([rank.movie.week[0].id, rank.movie.week[0].pic, rank.movie.week[0].uhd], ['uE22Zj9bavD', '/upload/video/f0c.gif', true])
@@ -127,10 +127,10 @@ test('homeBanners drops ads and never throws', async (t) => {
     '/api/home/getmyregion': [{ regionCode: 'HK' }],
     '/v3/home/getflashbanner': [
       { title: '广告', external: true, listPath: '', image: 'a.jpg' },
-      { title: '空枪', external: false, listPath: 'uE22Zj9bavD', image: 'https://static.yfsp.tv/upload/user/44e.jpg' },
+      { title: '空枪', external: false, listPath: 'uE22Zj9bavD', image: 'https://static.kubb.tv/upload/user/44e.jpg' },
     ],
   })
-  assert.deepEqual(await homeBanners(), [{ id: 'uE22Zj9bavD', name: '空枪', pic: 'https://static.yfsp.tv/upload/user/44e.jpg' }])
+  assert.deepEqual(await homeBanners(), [{ id: 'uE22Zj9bavD', name: '空枪', pic: 'https://static.kubb.tv/upload/user/44e.jpg' }])
   assert.match(urls[1], /region=HK/)
   t.mock.method(globalThis, 'fetch', async () => ({ ok: false, status: 520, text: async () => '' }))
   assert.deepEqual(await homeBanners(), [])

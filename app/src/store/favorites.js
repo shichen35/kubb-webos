@@ -3,7 +3,7 @@
  */
 import { createStore } from '../hooks/useStore.js'
 
-export const favoritesStore = createStore('yfsp:favorites', [])
+export const favoritesStore = createStore('kubb:favorites', [])
 
 export function list() {
   return favoritesStore.get()
